@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../../api/authApi';
 import { toast } from '../../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
+import { authApi } from '../../api/authApi.js'; // Added .js extension
 
 const AuthContext = createContext(null);
 
