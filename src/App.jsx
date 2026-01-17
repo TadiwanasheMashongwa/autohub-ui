@@ -1,23 +1,23 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './features/auth/AuthContext';
-import ErrorBoundary from './components/ErrorBoundary';
+import { useAuth } from './features/auth/AuthContext.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 // --- Auth Components ---
-import Login from './features/auth/Login';
-import MFAVerify from './features/auth/MFAVerify';
-import ForgotPassword from './features/auth/ForgotPassword';
-import ResetPassword from './features/auth/ResetPassword';
+import Login from './features/auth/Login.jsx';
+import MFAVerify from './features/auth/MFAVerify.jsx';
+import ForgotPassword from './features/auth/ForgotPassword.jsx';
+import ResetPassword from './features/auth/ResetPassword.jsx';
 
 // --- Feature Components ---
-import PartCatalog from './features/catalog/PartCatalog';
-import CartDrawer from './features/checkout/CartDrawer';
-import CheckoutPage from './features/checkout/CheckoutPage';
-import AdminDashboard from './features/dashboard/AdminDashboard';
-import AuditLogViewer from './features/dashboard/AuditLogViewer';
-import OrderManager from './features/dashboard/OrderManager';
+import PartCatalog from './features/catalog/PartCatalog.jsx';
+import CartDrawer from './features/checkout/CartDrawer.jsx';
+import CheckoutPage from './features/checkout/CheckoutPage.jsx';
+import AdminDashboard from './features/dashboard/AdminDashboard.jsx';
+import AuditLogViewer from './features/dashboard/AuditLogViewer.jsx';
+import OrderManager from './features/dashboard/OrderManager.jsx';
 
 // --- Routing & Security ---
-import RoleGuard from './routes/RoleGuard';
+import RoleGuard from './routes/RoleGuard.jsx';
 
 /**
  * Global Operational Components
@@ -139,4 +139,4 @@ export default function App() {
       </div>
     </ErrorBoundary>
   );
-}n
+}
