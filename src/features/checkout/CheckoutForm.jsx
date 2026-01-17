@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
+import { orderApi } from '../../api/orderApi';
 import { paymentApi } from '../../api/paymentApi';
 import { useCart } from '../../context/CartContext';
 import { toast } from '../../context/NotificationContext';
@@ -20,14 +21,23 @@ export default function CheckoutForm() {
 
     setIsProcessing(true);
 
-    // Generate or retrieve the unique key for this specific cart transaction
+    // 1. Idempotency: Protect against double-clicks
     const idempotencyKey = getIdempotencyKey(`cart_${cart.id}`);
 
     try {
-      // 1. Create Intent via Backend with Idempotency Key
-      const { clientSecret } = await paymentApi.createPaymentIntent(cart.id, idempotencyKey);
+      // --- STEP 1: CONVERT CART TO ORDER ---
+      // Backend: OrderController.checkout()
+      const order = await orderApi.checkout(idempotencyKey);
+      console.log("Order Created:", order.id);
 
-      // 2. Confirm Payment with Stripe
+      // --- STEP 2: INITIATE PAYMENT INTENT ---
+      // Backend: PaymentController.initiate(orderId)
+      const paymentResponse = await paymentApi.initiatePayment(order.id);
+      const clientSecret = paymentResponse.clientSecret || paymentResponse.secret; // Handle variable naming
+
+      if (!clientSecret) throw new Error("Failed to initialize payment gateway");
+
+      // --- STEP 3: CONFIRM WITH STRIPE ---
       const result = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: elements.getElement(CardElement),
@@ -37,20 +47,24 @@ export default function CheckoutForm() {
       if (result.error) {
         toast.show(result.error.message, 'error');
         setIsProcessing(false);
-        // Note: We do NOT clear the key here. If they fix their card info 
-        // and try again, we want the same intent, not a new one.
       } else {
         if (result.paymentIntent.status === 'succeeded') {
-          toast.show("Payment Authorized and Orchestrated", "success");
           
-          // 3. Success! Now we can clear the key and refresh the app state
+          // --- STEP 4: CONFIRM ON BACKEND (Mark Order as PAID) ---
+          // Backend: PaymentController.confirm()
+          await paymentApi.confirmPaymentServerSide(order.id, result.paymentIntent.id);
+          
+          toast.show("Transaction Settled Successfully", "success");
+          
+          // Cleanup
           clearIdempotencyKey(`cart_${cart.id}`);
           await refreshCart(); 
           navigate('/dashboard/orders/success');
         }
       }
     } catch (err) {
-      // API bridge handles the toast error
+      console.error(err);
+      // Errors are generally caught by the API interceptor, but we disable loading state here
       setIsProcessing(false);
     }
   };
@@ -74,7 +88,7 @@ export default function CheckoutForm() {
 
       <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono uppercase">
         <ShieldCheck className="h-4 w-4 text-brand-accent" />
-        Idempotency Active: {cart?.id?.substring(0,6)}
+        Transaction Lock: {cart?.id?.substring(0,6)}
       </div>
 
       <button
@@ -85,7 +99,7 @@ export default function CheckoutForm() {
         {isProcessing ? (
           <Loader2 className="animate-spin h-5 w-5" />
         ) : (
-          `Complete Transaction $${cart?.totalPrice?.toFixed(2)}`
+          `Authorize Charge $${cart?.totalPrice?.toFixed(2)}`
         )}
       </button>
     </form>

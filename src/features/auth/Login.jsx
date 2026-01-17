@@ -15,21 +15,23 @@ export default function Login() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const result = await login(email, password);
-    
-    if (result.success) {
-      if (result.mfaRequired) {
-        // Hand off to MFA screen with the temporary token
-        navigate('/verify-mfa', { 
-          state: { 
-            tempToken: result.tempToken, 
-            email: result.email 
-          } 
-        });
+    try {
+      // The AuthContext uses authApi, which now points to /api/v1/auth/login
+      const result = await login(email, password);
+      
+      if (result.success) {
+        // Backend 'authenticate' endpoint currently returns direct token (No MFA challenge in provided Java code)
+        // If you add MFA later, we will uncomment the logic below.
+        /* if (result.mfaRequired) {
+           navigate('/verify-mfa', { state: { tempToken: result.tempToken, email: result.email } });
+           return;
+        } 
+        */
+        navigate('/admin'); // Redirecting to Admin/Dashboard root
       } else {
-        navigate('/dashboard');
+        setIsSubmitting(false);
       }
-    } else {
+    } catch (error) {
       setIsSubmitting(false);
     }
   };
