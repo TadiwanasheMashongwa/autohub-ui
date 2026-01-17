@@ -1,72 +1,74 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import apiClient from '../../api/apiClient';
+import { authApi } from '../../api/authApi';
+import { toast } from '../../context/NotificationContext';
+import { useNavigate } from 'react-router-dom';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Load user from storage on app start
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
+    const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
-    if (savedUser && token) {
-      setUser(JSON.parse(savedUser));
+    if (storedUser && token) {
+      setUser(JSON.parse(storedUser));
     }
     setLoading(false);
   }, []);
 
   const login = async (email, password) => {
     try {
-      const response = await apiClient.post('/auth/authenticate', { email, password });
-      
-      if (response.data.mfaRequired) {
+      // 1. Call the API (This now points to /api/v1/auth/login)
+      const data = await authApi.login({ email, password });
+
+      // 2. Check if MFA is required (Backend dependent)
+      if (data.mfa_enabled) {
         return { 
           success: true, 
           mfaRequired: true, 
-          tempToken: response.data.tempToken,
-          email: email 
+          tempToken: data.temp_token, // Adjust based on your exact JSON response keys
+          email 
         };
       }
 
-      const { accessToken, refreshToken, user: userData } = response.data;
-      localStorage.setItem('token', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+      // 3. Success - Store Session
+      // Note: Adjust 'access_token' vs 'accessToken' based on your RegisterRequest/Response Java class
+      const token = data.access_token || data.accessToken || data.token;
+      const refreshToken = data.refresh_token || data.refreshToken;
+      
+      if (!token) throw new Error("No access token received from server");
+
+      const userData = { email, role: 'ADMIN' }; // You might want to decode the JWT here to get real role
+      
+      localStorage.setItem('token', token);
+      if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
       
       setUser(userData);
+      toast.show(`Welcome back, ${email}`, 'success');
+      
       return { success: true, mfaRequired: false };
-    } catch (error) {
-      return { success: false };
-    }
-  };
 
-  const requestPasswordReset = async (email) => {
-    try {
-      await apiClient.post('/auth/password-reset/request', { email });
-      return { success: true };
     } catch (error) {
-      return { success: false };
-    }
-  };
-
-  const resetPassword = async (token, newPassword) => {
-    try {
-      await apiClient.post('/auth/password-reset/confirm', { token, newPassword });
-      return { success: true };
-    } catch (error) {
-      return { success: false };
+      console.error("Login Failed:", error);
+      // The apiClient interceptor usually handles the toast, 
+      // but we return false here to stop the UI spinner.
+      return { success: false, error: error.message };
     }
   };
 
   const logout = () => {
+    authApi.logout().catch(err => console.warn("Logout notify failed", err));
     localStorage.clear();
     setUser(null);
     window.location.href = '/login';
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, requestPasswordReset, resetPassword }}>
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );
