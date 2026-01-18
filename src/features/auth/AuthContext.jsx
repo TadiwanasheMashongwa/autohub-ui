@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { authApi } from '../../api/authApi';
+// Line 2 removed to prevent duplicate declaration
 import { toast } from '../../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { authApi } from '../../api/authApi.js'; // Added .js extension
+import { authApi } from '../../api/authApi.js'; // Keeping this one with the .js extension
 
 const AuthContext = createContext(null);
 
