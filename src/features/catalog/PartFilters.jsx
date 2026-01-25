@@ -7,35 +7,47 @@ export default function PartFilters({ activeFilters, onFilterChange }) {
   const brands = ['Bosch', 'Brembo', 'Denso', 'NGK', 'Mobil 1', 'Castrol'];
 
   useEffect(() => {
-    categoryApi.getAllCategories()
-      .then(setCategories)
-      .catch(() => console.error("Category sync offline."));
+    const fetchCategories = async () => {
+      try {
+        const data = await categoryApi.getAllCategories();
+        setCategories(data);
+      } catch (error) {
+        console.error("Failed to sync categories");
+      }
+    };
+    fetchCategories();
   }, []);
 
-  const clear = () => onFilterChange({ categoryId: null, brand: null, condition: null });
+  const clearFilters = () => {
+    onFilterChange({ categoryId: null, brand: null, condition: null });
+  };
 
   return (
-    <aside className="w-80 border-r border-white/5 bg-slate-950/20 p-8 hidden lg:flex flex-col gap-12 sticky top-0 h-screen overflow-y-auto">
+    // SV-Grade: Locked width and flex-shrink-0 ensures this sidebar NEVER disappears
+    <aside className="w-72 flex-shrink-0 border-r border-white/5 bg-slate-950/20 p-8 flex flex-col gap-10 sticky top-0 h-screen overflow-y-auto z-20">
       <div className="flex items-center justify-between">
         <h3 className="text-white font-black uppercase text-xs tracking-[0.2em] flex items-center gap-3">
           <Filter className="h-4 w-4 text-brand-accent" />
           Refine
         </h3>
-        <button onClick={clear} className="text-slate-600 hover:text-red-400 transition-colors">
+        <button onClick={clearFilters} className="text-slate-600 hover:text-red-400 transition-colors">
           <RotateCcw className="h-4 w-4" />
         </button>
       </div>
 
       <div className="space-y-12">
+        {/* Category Section */}
         <section>
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 block">Asset Category</label>
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 block">Categories</label>
           <div className="flex flex-col gap-1">
             {categories.map(cat => (
               <button
                 key={cat.id}
                 onClick={() => onFilterChange({ ...activeFilters, categoryId: activeFilters.categoryId === cat.id ? null : cat.id })}
-                className={`text-left px-4 py-3 rounded-xl text-xs font-bold uppercase transition-all ${
-                  activeFilters.categoryId === cat.id ? 'bg-brand-accent text-brand-dark shadow-lg shadow-brand-accent/20' : 'text-slate-400 hover:bg-white/5'
+                className={`text-left px-4 py-2.5 rounded-xl text-xs font-bold uppercase transition-all ${
+                  activeFilters.categoryId === cat.id 
+                  ? 'bg-brand-accent text-brand-dark shadow-lg shadow-brand-accent/20' 
+                  : 'text-slate-400 hover:bg-white/5 hover:text-white'
                 }`}
               >
                 {cat.name}
@@ -44,6 +56,7 @@ export default function PartFilters({ activeFilters, onFilterChange }) {
           </div>
         </section>
 
+        {/* Brand Section */}
         <section>
           <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 block">Manufacturer</label>
           <div className="grid grid-cols-1 gap-2">
@@ -52,7 +65,9 @@ export default function PartFilters({ activeFilters, onFilterChange }) {
                 key={brand}
                 onClick={() => onFilterChange({ ...activeFilters, brand: activeFilters.brand === brand ? null : brand })}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-[10px] font-black uppercase transition-all ${
-                  activeFilters.brand === brand ? 'bg-brand-accent border-brand-accent text-brand-dark' : 'bg-transparent border-white/5 text-slate-500 hover:border-white/20'
+                  activeFilters.brand === brand 
+                  ? 'bg-brand-accent border-brand-accent text-brand-dark' 
+                  : 'bg-transparent border-white/5 text-slate-500 hover:border-white/20'
                 }`}
               >
                 <Award className="h-4 w-4" />
@@ -62,9 +77,10 @@ export default function PartFilters({ activeFilters, onFilterChange }) {
           </div>
         </section>
 
+        {/* Condition Section */}
         <section>
           <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 block">Condition</label>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {['NEW', 'USED', 'REFURBISHED'].map(cond => (
               <label key={cond} className="flex items-center gap-4 cursor-pointer group">
                 <input 

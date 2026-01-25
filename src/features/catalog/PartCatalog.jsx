@@ -23,8 +23,7 @@ export default function PartCatalog() {
     setLoading(true);
     try {
       let data;
-      
-      // We now pass activeFilters to all methods to ensure Brand/Condition are applied
+      // LOGIC FIX: We must pass activeFilters (brand/condition) to the API calls
       if (selectedVehicle) {
         data = await partsApi.getPartsByVehicle(selectedVehicle.id, page);
       } else if (searchQuery) {
@@ -38,7 +37,7 @@ export default function PartCatalog() {
       setParts(data.content || []);
       setTotalPages(data.totalPages || 0);
     } catch (error) {
-      toast.show("Sync Error: Refreshing Terminal", "error");
+      toast.show("Link Failure: Re-syncing Terminal", "error");
     } finally {
       setLoading(false);
     }
@@ -53,11 +52,7 @@ export default function PartCatalog() {
     <div className="flex bg-brand-dark min-h-screen">
       <PartFilters 
         activeFilters={activeFilters}
-        onFilterChange={(newFilters) => {
-          setActiveFilters(newFilters);
-          setPage(0);
-          // We no longer clear search here so user can "Search within Category"
-        }}
+        onFilterChange={(f) => { setActiveFilters(f); setPage(0); }}
       />
 
       <div className="flex-1 px-10 py-10 max-w-[1600px] mx-auto">
@@ -72,7 +67,7 @@ export default function PartCatalog() {
               {isStaff ? 'Inventory Management' : 'Parts Catalog'}
             </h2>
             <p className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.5em]">
-              Sector Tracking: {activeFilters.brand || 'All Brands'} / {activeFilters.condition || 'All Conditions'}
+              {isStaff ? 'Internal Logistics Link' : 'Premium Parts Fulfillment'}
             </p>
           </div>
 
@@ -80,7 +75,7 @@ export default function PartCatalog() {
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-600 group-focus-within:text-brand-accent transition-colors" />
             <input
               type="text"
-              placeholder={isStaff ? "Search SKU, OEM, or Location..." : "Search performance parts..."}
+              placeholder={isStaff ? "Search SKU, OEM, or Bin Location..." : "Search for high-performance parts..."}
               className="w-full bg-white/5 border border-white/10 rounded-2xl py-4.5 pl-14 pr-6 text-white focus:outline-none focus:border-brand-accent/40 transition-all shadow-2xl font-medium"
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
@@ -97,30 +92,29 @@ export default function PartCatalog() {
             {parts.map(part => <PartCard key={part.id} part={part} />)}
           </div>
         ) : (
-          <div className="h-[40vh] flex flex-col items-center justify-center text-center opacity-50">
-            <PackageSearch className="h-16 w-16 mb-4 text-slate-700" />
-            <p className="text-white font-black uppercase text-xs tracking-widest">No matching assets found in this sector</p>
+          <div className="h-[40vh] flex flex-col items-center justify-center opacity-50 text-slate-500">
+            <PackageSearch className="h-16 w-16 mb-4" />
+            <p className="uppercase font-black text-xs tracking-widest">No matching assets in this sector</p>
           </div>
         )}
 
         {totalPages > 1 && (
-          <footer className="flex items-center justify-center gap-6 mt-16 pt-10 border-t border-white/5">
-            <button
-              disabled={page === 0}
+          <div className="mt-12 flex justify-center gap-4">
+            <button 
+              disabled={page === 0} 
               onClick={() => setPage(p => p - 1)}
-              className="h-12 w-12 flex items-center justify-center rounded-2xl bg-white/5 text-slate-400 hover:text-brand-accent disabled:opacity-10 transition-all border border-white/5"
+              className="px-4 py-2 bg-white/5 rounded-xl text-white disabled:opacity-20"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft />
             </button>
-            <span className="text-sm font-black text-white font-mono">{page + 1} / {totalPages}</span>
-            <button
-              disabled={page >= totalPages - 1}
+            <button 
+              disabled={page >= totalPages - 1} 
               onClick={() => setPage(p => p + 1)}
-              className="h-12 w-12 flex items-center justify-center rounded-2xl bg-white/5 text-slate-400 hover:text-brand-accent disabled:opacity-10 transition-all border border-white/5"
+              className="px-4 py-2 bg-white/5 rounded-xl text-white disabled:opacity-20"
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight />
             </button>
-          </footer>
+          </div>
         )}
       </div>
     </div>
