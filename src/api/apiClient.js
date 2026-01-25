@@ -49,7 +49,7 @@ apiClient.interceptors.response.use(
       toast.show("Access Denied: Terminal Restricted", 'error');
     } 
     
-    // 3. Handle Generic Errors (Skip toast for silent validation calls)
+    // 3. General Error Suppression for background validation
     else if (!isValidationCall) {
       const msg = error.response?.data?.message || "Connection Interrupted";
       toast.show(msg, 'error');

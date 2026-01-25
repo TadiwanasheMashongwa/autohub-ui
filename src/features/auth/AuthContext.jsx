@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
       } catch (error) {
-        // Silent clear: Don't toast during auto-init failure
+        // Silent failure for startup check
         localStorage.clear();
         setUser(null);
       } finally {
