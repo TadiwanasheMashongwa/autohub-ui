@@ -19,9 +19,6 @@ import OrderManager from './features/dashboard/OrderManager.jsx';
 // --- Routing & Security ---
 import RoleGuard from './routes/RoleGuard.jsx';
 
-/**
- * Global Operational Components
- */
 const OrderSuccess = () => (
   <div className="min-h-screen flex flex-col items-center justify-center bg-brand-dark text-center p-6">
     <div className="h-20 w-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6">
@@ -61,22 +58,20 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-brand-dark selection:bg-brand-accent selection:text-brand-dark">
-        {/* The Cart slides out over any route when triggered */}
         <CartDrawer />
 
         <Routes>
-          {/* --- Public/Auth Routes --- */}
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-mfa" element={<MFAVerify />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
 
-          {/* --- Customer & Clerk Routes (Updated to include 'USER') --- */}
+          {/* --- UPDATED: Added 'CUSTOMER' to these routes --- */}
           <Route 
             path="/warehouse/*" 
             element={
-              <RoleGuard allowedRoles={['CLERK', 'ADMIN', 'USER']}>
+              <RoleGuard allowedRoles={['CLERK', 'ADMIN', 'CUSTOMER']}>
                 <PartCatalog />
               </RoleGuard>
             } 
@@ -85,7 +80,7 @@ export default function App() {
           <Route 
             path="/orders" 
             element={
-              <RoleGuard allowedRoles={['CLERK', 'ADMIN', 'USER']}>
+              <RoleGuard allowedRoles={['CLERK', 'ADMIN', 'CUSTOMER']}>
                 <OrderManager />
               </RoleGuard>
             } 
@@ -94,7 +89,7 @@ export default function App() {
           <Route 
             path="/checkout" 
             element={
-              <RoleGuard allowedRoles={['CLERK', 'ADMIN', 'USER']}>
+              <RoleGuard allowedRoles={['CLERK', 'ADMIN', 'CUSTOMER']}>
                 <CheckoutPage />
               </RoleGuard>
             } 
@@ -102,7 +97,6 @@ export default function App() {
 
           <Route path="/dashboard/orders/success" element={<OrderSuccess />} />
 
-          {/* --- Admin Only Routes --- */}
           <Route 
             path="/admin" 
             element={
@@ -121,7 +115,6 @@ export default function App() {
             } 
           />
 
-          {/* --- Root Navigation Logic --- */}
           <Route 
             path="/" 
             element={
@@ -133,10 +126,9 @@ export default function App() {
             } 
           />
 
-          {/* 404 Redirect */}
           <Route path="*" element={<Navigate to="/unauthorized" replace />} />
         </Routes>
       </div>
     </ErrorBoundary>
   );
-};
+}

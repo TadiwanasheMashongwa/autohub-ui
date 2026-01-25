@@ -5,7 +5,6 @@ import { authApi } from '../../api/authApi.js';
 
 const AuthContext = createContext(null);
 
-// --- HELPER: DECODE JWT TOKEN ---
 const parseJwt = (token) => {
   try {
     return JSON.parse(atob(token.split('.')[1]));
@@ -18,7 +17,6 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Load user from storage on app start
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
@@ -31,10 +29,8 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      // 1. Call Backend
       const data = await authApi.login({ email, password });
 
-      // 2. Handle MFA
       if (data.mfa_enabled) {
         return { 
           success: true, 
@@ -44,24 +40,19 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
-      // 3. Extract Token
       const token = data.access_token || data.accessToken || data.token;
       const refreshToken = data.refresh_token || data.refreshToken;
       
       if (!token) throw new Error("No access token received from server");
 
-      // 4. Decode Role
       const decoded = parseJwt(token);
       
-      // Look for 'role', 'roles', or 'authorities'. Default to 'USER' if missing.
-      const rawRole = decoded?.role || decoded?.roles?.[0] || decoded?.authorities?.[0] || 'USER';
-      
-      // Clean up role string (remove ROLE_ prefix)
-      const role = typeof rawRole === 'string' ? rawRole.replace('ROLE_', '') : 'USER';
+      // Handle the ROLE_ prefix from backend
+      const rawRole = decoded?.role || decoded?.roles?.[0] || decoded?.authorities?.[0] || 'CUSTOMER';
+      const role = typeof rawRole === 'string' ? rawRole.replace('ROLE_', '') : 'CUSTOMER';
 
       const userData = { email, role };
       
-      // 5. Save Session
       localStorage.setItem('token', token);
       if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
