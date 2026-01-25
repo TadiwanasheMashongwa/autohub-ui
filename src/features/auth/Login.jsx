@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from './AuthContext';
-import { useNavigate, Link } from 'react-router-dom'; // Added Link
-import { Lock, Mail, Loader2 } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Lock, Mail, Loader2, ShieldAlert } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -14,20 +15,36 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
 
     try {
       const result = await login(email, password);
       
       if (result.success) {
-        if (result.role === 'ADMIN') {
-          navigate('/admin');
-        } else {
-          navigate('/warehouse');
+        if (result.mfaRequired) {
+          navigate('/verify-mfa', { state: { email } });
+          return;
+        }
+
+        // Strict Redirection Mapping
+        switch (result.role) {
+          case 'ADMIN':
+            navigate('/admin');
+            break;
+          case 'CLERK':
+          case 'CUSTOMER':
+            navigate('/warehouse');
+            break;
+          default:
+            setError("Unauthorized Identity: Access Denied");
+            setIsSubmitting(false);
         }
       } else {
+        setError(result.error);
         setIsSubmitting(false);
       }
-    } catch (error) {
+    } catch (err) {
+      setError("Terminal Connection Failure");
       setIsSubmitting(false);
     }
   };
@@ -43,6 +60,13 @@ export default function Login() {
             Operator Terminal Access
           </p>
         </div>
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex items-center gap-3 animate-pulse">
+            <ShieldAlert className="h-5 w-5 text-red-500" />
+            <p className="text-xs text-red-400 font-bold uppercase tracking-tight">{error}</p>
+          </div>
+        )}
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">

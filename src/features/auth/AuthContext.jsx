@@ -18,21 +18,29 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
+    // Silicon Valley Grade: Clear stale sessions before a new attempt
+    localStorage.clear(); 
+    
     try {
       const data = await authApi.login({ email, password });
 
-      // Detect MFA status from AuthenticationService.java
+      // 1. Detect MFA Requirement
       if (data.accessToken === "MFA_REQUIRED") {
         return { success: true, mfaRequired: true, email };
       }
 
-      // Standard DTO Mapping
+      // 2. Strict Role Extraction
+      if (!data.role) {
+        throw new Error("Security Error: Identity role not provided by server.");
+      }
+
       const token = data.accessToken;
       const refreshToken = data.refreshToken;
-      const role = data.role.replace('ROLE_', '');
+      const role = data.role.replace('ROLE_', ''); // Normalize to ADMIN, CUSTOMER, or CLERK
       
       const userData = { email: data.username, role };
       
+      // 3. Secure Session Storage
       localStorage.setItem('token', token);
       localStorage.setItem('refreshToken', refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
@@ -40,14 +48,21 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       toast.show(`Operator Authenticated: ${role} Profile`, 'success');
       return { success: true, mfaRequired: false, role };
+
     } catch (error) {
-      return { success: false, error: error.message };
+      console.error("Auth Failure:", error);
+      const msg = error.response?.data?.message || error.message || "Authentication Failed";
+      toast.show(msg, 'error');
+      return { success: false, error: msg };
     }
   };
 
   const verifyMfaAction = async (email, code) => {
     try {
       const data = await authApi.verifyMfa({ email, code });
+      
+      if (!data.role) throw new Error("MFA Success but role missing.");
+
       const role = data.role.replace('ROLE_', '');
       const userData = { email: data.username, role };
 
