@@ -17,7 +17,6 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        // Confirm identity with backend
         const data = await authApi.getProfile(); 
         const role = data.role.replace('ROLE_', '');
         const userData = { email: data.username, role };
@@ -25,7 +24,6 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
       } catch (error) {
-        // Silent clear - background validation failed
         localStorage.clear();
         setUser(null);
       } finally {
@@ -40,10 +38,12 @@ export const AuthProvider = ({ children }) => {
     localStorage.clear(); 
     try {
       const data = await authApi.login({ email, password });
-      
+
       if (data.accessToken === "MFA_REQUIRED") {
         return { success: true, mfaRequired: true, email };
       }
+
+      if (!data.role) throw new Error("Security Error: Identity role missing.");
 
       const role = data.role.replace('ROLE_', '');
       const userData = { email: data.username, role };
@@ -53,23 +53,39 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(userData));
       
       setUser(userData);
-      toast.show(`Access Granted: ${role} Profile`, 'success');
+      toast.show(`Authenticated: ${role} Profile`, 'success');
       return { success: true, mfaRequired: false, role };
     } catch (error) {
-      const msg = error.response?.data?.message || "Login Failed";
+      const msg = error.response?.data?.message || error.message || "Login Failed";
       toast.show(msg, 'error');
       return { success: false, error: msg };
     }
   };
 
-  const logout = () => {
-    localStorage.clear();
-    setUser(null);
-    window.location.href = '/login';
+  /**
+   * Silicon Valley Grade: Double-Tap Logout
+   * 1. Attempts to notify the backend (POST /logout)
+   * 2. Forcefully clears local state regardless of server response
+   */
+  const logout = async () => {
+    try {
+      // Direct call to notify backend
+      await authApi.logout();
+    } catch (error) {
+      console.warn("Backend session termination unreachable.");
+    } finally {
+      // Local wipe always executes
+      localStorage.clear();
+      setUser(null);
+      toast.show("Session Terminated", "success");
+      window.location.href = '/login';
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ 
+      user, login, logout, loading 
+    }}>
       {!loading && children}
     </AuthContext.Provider>
   );
