@@ -11,14 +11,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initializeSession = async () => {
       const token = localStorage.getItem('token');
-      
       if (!token) {
         setLoading(false);
         return;
       }
 
       try {
-        // Silicon Valley Grade: Don't trust local strings. Ask the Source of Truth.
         const data = await authApi.getProfile(); 
         const role = data.role.replace('ROLE_', '');
         const userData = { email: data.username, role };
@@ -26,7 +24,7 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
       } catch (error) {
-        // Token is likely expired or invalid
+        // Silent clear: Don't toast during auto-init failure
         localStorage.clear();
         setUser(null);
       } finally {
@@ -41,14 +39,11 @@ export const AuthProvider = ({ children }) => {
     localStorage.clear(); 
     try {
       const data = await authApi.login({ email, password });
-
       if (data.accessToken === "MFA_REQUIRED") {
         return { success: true, mfaRequired: true, email };
       }
 
-      if (!data.role) {
-        throw new Error("Security Error: Identity role missing.");
-      }
+      if (!data.role) throw new Error("Security Error: Identity role missing.");
 
       const role = data.role.replace('ROLE_', '');
       const userData = { email: data.username, role };
@@ -68,17 +63,13 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    const userEmail = user?.email;
-    if (userEmail) authApi.logout(userEmail).catch(() => {});
     localStorage.clear();
     setUser(null);
     window.location.href = '/login';
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, login, logout, loading
-    }}>
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );
