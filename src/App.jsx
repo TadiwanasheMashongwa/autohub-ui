@@ -6,6 +6,7 @@ import Sidebar from './components/layout/Sidebar.jsx';
 import Login from './features/auth/Login.jsx';
 import Register from './features/auth/Register.jsx';
 import PartCatalog from './features/catalog/PartCatalog.jsx';
+import PartDetail from './features/catalog/PartDetail.jsx';
 import AdminDashboard from './features/dashboard/AdminDashboard.jsx';
 import RoleGuard from './routes/RoleGuard.jsx';
 
@@ -26,13 +27,21 @@ export default function App() {
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
           <Route path="/register" element={!user ? <Register /> : <Navigate to="/" replace />} />
 
-          {/* Protected */}
+          {/* Protected Catalog */}
           <Route path="/warehouse" element={
             <RoleGuard allowedRoles={['ADMIN', 'CLERK', 'CUSTOMER']}>
               <PartCatalog />
             </RoleGuard>
           } />
 
+          {/* STEP 04: Part Technical Spec View */}
+          <Route path="/warehouse/parts/:id" element={
+            <RoleGuard allowedRoles={['ADMIN', 'CLERK', 'CUSTOMER']}>
+              <PartDetail />
+            </RoleGuard>
+          } />
+
+          {/* Admin Protected */}
           <Route path="/admin" element={
             <RoleGuard allowedRoles={['ADMIN']}>
               <AdminDashboard />

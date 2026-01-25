@@ -1,6 +1,10 @@
 import apiClient from './apiClient';
 
-export const partApi = {
+/**
+ * Silicon Valley Grade: Inventory Service Layer
+ * pluralized to match filename and terminal logic.
+ */
+export const partsApi = {
   // Consumes PartController @GetMapping (Public)
   getParts: async (page = 0, size = 12) => {
     const response = await apiClient.get(`/parts?page=${page}&size=${size}`);
@@ -25,6 +29,7 @@ export const partApi = {
     return response.data;
   },
 
+  // Fetches full technical specs and reviews
   getPartDetails: async (id) => {
     const response = await apiClient.get(`/parts/${id}`);
     return response.data;
