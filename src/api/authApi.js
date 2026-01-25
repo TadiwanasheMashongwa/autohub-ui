@@ -12,8 +12,14 @@ export const authApi = {
   },
 
   verifyMfa: async (data) => {
-    // Matches public AuthenticationResponse verifyMfa(String email, String code)
     const response = await apiClient.post('/auth/verify-mfa', data);
+    return response.data;
+  },
+
+  getProfile: async () => {
+    // Silicon Valley Grade: Identity validation endpoint
+    // Ensure you have a corresponding GET /api/v1/auth/me in your Controller
+    const response = await apiClient.get('/auth/me');
     return response.data;
   },
 
@@ -30,7 +36,6 @@ export const authApi = {
   },
 
   refreshToken: async (token) => {
-    // Matches @Transactional refreshToken endpoint
     return apiClient.post('/auth/refresh', { refreshToken: token });
   }
 };

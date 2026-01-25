@@ -9,26 +9,32 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initializeAuth = () => {
-      const storedUser = localStorage.getItem('user');
+    const initializeSession = async () => {
       const token = localStorage.getItem('token');
       
-      // Strict check: Only restore session if BOTH user and token exist
-      if (storedUser && token) {
-        try {
-          setUser(JSON.parse(storedUser));
-        } catch (e) {
-          localStorage.clear(); // Wipe corrupt data
-        }
-      } else {
-        // Force clear to ensure no partial data causes "Ghost Login"
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+
+      try {
+        // Silicon Valley Grade: Don't trust local strings. Ask the Source of Truth.
+        const data = await authApi.getProfile(); 
+        const role = data.role.replace('ROLE_', '');
+        const userData = { email: data.username, role };
+        
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+      } catch (error) {
+        // Token is likely expired or invalid
+        localStorage.clear();
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    initializeAuth();
+    initializeSession();
   }, []);
 
   const login = async (email, password) => {
@@ -44,13 +50,11 @@ export const AuthProvider = ({ children }) => {
         throw new Error("Security Error: Identity role missing.");
       }
 
-      const token = data.accessToken;
-      const refreshToken = data.refreshToken;
       const role = data.role.replace('ROLE_', '');
       const userData = { email: data.username, role };
       
-      localStorage.setItem('token', token);
-      localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem('token', data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
       
       setUser(userData);
@@ -64,6 +68,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    const userEmail = user?.email;
+    if (userEmail) authApi.logout(userEmail).catch(() => {});
     localStorage.clear();
     setUser(null);
     window.location.href = '/login';
