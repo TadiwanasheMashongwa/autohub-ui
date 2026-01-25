@@ -1,27 +1,32 @@
 import apiClient from './apiClient';
 
-export const partsApi = {
-  // Get all parts with filtering and pagination
-  getParts: async (params) => {
-    const response = await apiClient.get('/parts', { params });
+export const partApi = {
+  // Consumes PartController @GetMapping (Public)
+  getParts: async (page = 0, size = 12) => {
+    const response = await apiClient.get(`/parts?page=${page}&size=${size}`);
     return response.data;
   },
 
-  // Get a single part by ID
-  getPartById: async (id) => {
+  // Matches @Query in PartRepository for name, brand, sku, oemNumber
+  searchParts: async (query, page = 0, size = 12) => {
+    const response = await apiClient.get(`/parts/search?query=${query}&page=${page}&size=${size}`);
+    return response.data;
+  },
+
+  // Consumes findByCategoryId
+  getPartsByCategory: async (categoryId, page = 0, size = 12) => {
+    const response = await apiClient.get(`/parts/category/${categoryId}?page=${page}&size=${size}`);
+    return response.data;
+  },
+
+  // Consumes findByCompatibleVehiclesId
+  getPartsByVehicle: async (vehicleId, page = 0, size = 12) => {
+    const response = await apiClient.get(`/parts/vehicle/${vehicleId}?page=${page}&size=${size}`);
+    return response.data;
+  },
+
+  getPartDetails: async (id) => {
     const response = await apiClient.get(`/parts/${id}`);
-    return response.data;
-  },
-
-  // Get all vehicle makes/models for the filter dropdowns
-  getVehicles: async () => {
-    const response = await apiClient.get('/vehicles');
-    return response.data;
-  },
-
-  // Get categories for the sidebar
-  getCategories: async () => {
-    const response = await apiClient.get('/categories');
     return response.data;
   }
 };

@@ -1,103 +1,108 @@
-import { useState } from 'react';
-import { useParts, useCategories } from '../../hooks/useParts';
-import { useCart } from '../../context/CartContext';
-import { Search, Package, ShoppingCart, Loader2 } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { partApi } from '../../api/partApi';
+import PartCard from './PartCard.jsx';
+import { Search, Loader2, ChevronLeft, ChevronRight, PackageSearch } from 'lucide-react';
+import { toast } from '../../context/NotificationContext';
 
 export default function PartCatalog() {
-  const [filters, setFilters] = useState({ search: '', category: '' });
-  const { data: parts, isLoading, isError } = useParts(filters);
-  const { data: categories } = useCategories();
-  const { addItem } = useCart();
-  const [addingId, setAddingId] = useState(null);
+  const [parts, setParts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
-  const handleAddToCart = async (partId) => {
-    setAddingId(partId);
-    await addItem(partId, 1);
-    setAddingId(null);
-  };
+  const fetchParts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = searchQuery 
+        ? await partApi.searchParts(searchQuery, page)
+        : await partApi.getParts(page);
+      
+      setParts(data.content || []);
+      setTotalPages(data.totalPages || 0);
+    } catch (error) {
+      toast.show("Terminal Error: Inventory Link Failed", "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, searchQuery]);
 
-  if (isLoading) return (
-    <div className="min-h-screen flex items-center justify-center bg-brand-dark">
-      <div className="flex flex-col items-center gap-4">
-        <Loader2 className="h-10 w-10 text-brand-accent animate-spin" />
-        <p className="text-slate-500 font-mono text-xs uppercase tracking-widest">Syncing Warehouse Data...</p>
-      </div>
-    </div>
-  );
-
-  if (isError) return <div className="p-10 text-red-500 font-mono">Critical: Inventory Sync Failed</div>;
+  useEffect(() => {
+    const delay = setTimeout(() => fetchParts(), 400);
+    return () => clearTimeout(delay);
+  }, [fetchParts]);
 
   return (
-    <div className="flex flex-col gap-6 p-6 bg-brand-dark min-h-screen">
-      {/* Header & Filter Bar */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/10 pb-6">
+    <div className="p-8 space-y-8 max-w-[1600px] mx-auto">
+      {/* Search Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-black text-white uppercase tracking-tight">
-            Spare Parts <span className="text-brand-accent">Catalog</span>
-          </h1>
-          <p className="text-[10px] text-slate-500 font-mono">Terminal Active • System v14.0</p>
+          <h2 className="text-3xl font-black text-white uppercase tracking-tighter">
+            Global <span className="text-brand-accent italic">Inventory</span>
+          </h2>
+          <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mt-1 italic">
+            Connected to AutoHub Central Database
+          </p>
         </div>
-        
-        <div className="flex gap-2 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-            <input 
-              type="text"
-              placeholder="Search SKU or Name..."
-              className="w-full bg-slate-900 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm text-white focus:border-brand-accent focus:outline-none transition-all"
-              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-            />
-          </div>
-          <select 
-            className="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-brand-accent focus:outline-none cursor-pointer"
-            onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value }))}
-          >
-            <option value="">All Categories</option>
-            {categories?.map(cat => (
-              <option key={cat.id} value={cat.name}>{cat.name}</option>
-            ))}
-          </select>
+
+        <div className="relative group max-w-md w-full">
+          <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-600 group-focus-within:text-brand-accent transition-colors" />
+          <input
+            type="text"
+            placeholder="Search by Name, SKU, Brand or OEM..."
+            className="w-full bg-slate-900/50 border border-white/5 rounded-2xl py-3.5 pl-12 pr-4 text-white placeholder-slate-600 focus:outline-none focus:border-brand-accent transition-all font-medium"
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
+          />
         </div>
       </div>
 
-      {/* Parts Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {parts?.content?.map((part) => (
-          <div key={part.id} className="bg-white/5 border border-white/10 rounded-xl p-4 hover:border-brand-accent/30 transition-all group flex flex-col">
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-2 bg-brand-accent/10 rounded-lg">
-                <Package className="h-6 w-6 text-brand-accent" />
-              </div>
-              <span className={`text-[10px] font-black px-2 py-1 rounded uppercase tracking-tighter ${
-                part.stockQuantity > 5 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'
-              }`}>
-                {part.stockQuantity} Units
-              </span>
-            </div>
-            
-            <h3 className="text-white font-bold text-sm mb-1 truncate">{part.name}</h3>
-            <p className="text-[10px] text-slate-500 font-mono mb-4 uppercase tracking-widest">{part.sku}</p>
-            
-            <div className="flex justify-between items-center mt-auto pt-4 border-t border-white/5">
-              <span className="text-lg font-black text-white">${part.price.toFixed(2)}</span>
-              <button 
-                onClick={() => handleAddToCart(part.id)}
-                disabled={addingId === part.id || part.stockQuantity === 0}
-                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-brand-accent text-brand-dark px-4 py-2 rounded-lg hover:bg-teal-400 disabled:opacity-50 transition-all active:scale-95"
-              >
-                {addingId === part.id ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <>
-                    <ShoppingCart className="h-3 w-3" />
-                    Reserve
-                  </>
-                )}
-              </button>
-            </div>
+      {/* Grid Area */}
+      {loading ? (
+        <div className="h-96 flex flex-col items-center justify-center gap-4">
+          <Loader2 className="h-10 w-10 text-brand-accent animate-spin" />
+          <span className="text-slate-500 font-mono text-[10px] uppercase tracking-[0.3em]">Syncing Local Cache...</span>
+        </div>
+      ) : parts.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {parts.map(part => (
+            <PartCard key={part.id} part={part} />
+          ))}
+        </div>
+      ) : (
+        <div className="h-96 flex flex-col items-center justify-center text-center space-y-4 bg-white/5 rounded-[2.5rem] border border-dashed border-white/10">
+          <PackageSearch className="h-12 w-12 text-slate-700" />
+          <p className="text-slate-400 font-bold uppercase text-sm tracking-widest">No assets found in current sector</p>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-6 pt-12 border-t border-white/5">
+          <button
+            disabled={page === 0}
+            onClick={() => setPage(p => p - 1)}
+            className="h-12 w-12 flex items-center justify-center rounded-2xl bg-white/5 text-slate-400 hover:text-brand-accent disabled:opacity-20 transition-all border border-white/5"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">Index</span>
+            <span className="text-sm font-black text-white">
+              {page + 1} <span className="text-slate-600 mx-2">/</span> {totalPages}
+            </span>
           </div>
-        ))}
-      </div>
+
+          <button
+            disabled={page >= totalPages - 1}
+            onClick={() => setPage(p => p + 1)}
+            className="h-12 w-12 flex items-center justify-center rounded-2xl bg-white/5 text-slate-400 hover:text-brand-accent disabled:opacity-20 transition-all border border-white/5"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
