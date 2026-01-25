@@ -8,13 +8,11 @@ export const authApi = {
   },
 
   register: async (userData) => {
-    // Points to @PostMapping("/register") using RegisterRequest DTO
     const response = await apiClient.post(AUTH_URLS.REGISTER, userData);
     return response.data;
   },
 
   verifyMfa: async (data) => {
-    // Matches MFA endpoint in your AuthenticationController
     const response = await apiClient.post(AUTH_URLS.VERIFY_MFA, data);
     return response.data;
   },
@@ -24,10 +22,12 @@ export const authApi = {
   },
 
   initiatePasswordReset: async (email) => {
+    // Matches @PostMapping("/forgot-password") - sends Map.of("email", email)
     return apiClient.post(AUTH_URLS.FORGOT_PASSWORD, { email });
   },
 
   completePasswordReset: async (token, newPassword) => {
+    // Matches @PostMapping("/reset-password") - sends Map.of("token", token, "newPassword", newPassword)
     return apiClient.post(AUTH_URLS.RESET_PASSWORD, { token, newPassword });
   },
 
