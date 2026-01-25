@@ -11,14 +11,8 @@ export const authApi = {
     return response.data;
   },
 
-  verifyMfa: async (data) => {
-    const response = await apiClient.post('/auth/verify-mfa', data);
-    return response.data;
-  },
-
   getProfile: async () => {
-    // Silicon Valley Grade: Identity validation endpoint
-    // Ensure you have a corresponding GET /api/v1/auth/me in your Controller
+    // Verified against @GetMapping("/me") in AuthenticationController.java
     const response = await apiClient.get('/auth/me');
     return response.data;
   },

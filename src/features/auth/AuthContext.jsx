@@ -17,6 +17,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
+        // Confirm identity with backend
         const data = await authApi.getProfile(); 
         const role = data.role.replace('ROLE_', '');
         const userData = { email: data.username, role };
@@ -24,7 +25,7 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
       } catch (error) {
-        // Silent failure for startup check
+        // Silent clear - background validation failed
         localStorage.clear();
         setUser(null);
       } finally {
@@ -39,11 +40,10 @@ export const AuthProvider = ({ children }) => {
     localStorage.clear(); 
     try {
       const data = await authApi.login({ email, password });
+      
       if (data.accessToken === "MFA_REQUIRED") {
         return { success: true, mfaRequired: true, email };
       }
-
-      if (!data.role) throw new Error("Security Error: Identity role missing.");
 
       const role = data.role.replace('ROLE_', '');
       const userData = { email: data.username, role };
@@ -53,10 +53,10 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(userData));
       
       setUser(userData);
-      toast.show(`Authenticated: ${role} Profile`, 'success');
+      toast.show(`Access Granted: ${role} Profile`, 'success');
       return { success: true, mfaRequired: false, role };
     } catch (error) {
-      const msg = error.response?.data?.message || error.message || "Login Failed";
+      const msg = error.response?.data?.message || "Login Failed";
       toast.show(msg, 'error');
       return { success: false, error: msg };
     }
