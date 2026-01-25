@@ -4,7 +4,7 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 // --- Auth Components ---
 import Login from './features/auth/Login.jsx';
-import Register from './features/auth/Register.jsx'; // Added Import
+import Register from './features/auth/Register.jsx';
 import MFAVerify from './features/auth/MFAVerify.jsx';
 import ForgotPassword from './features/auth/ForgotPassword.jsx';
 import ResetPassword from './features/auth/ResetPassword.jsx';
@@ -20,57 +20,26 @@ import OrderManager from './features/dashboard/OrderManager.jsx';
 // --- Routing & Security ---
 import RoleGuard from './routes/RoleGuard.jsx';
 
-const OrderSuccess = () => (
-  <div className="min-h-screen flex flex-col items-center justify-center bg-brand-dark text-center p-6">
-    <div className="h-20 w-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6">
-      <svg className="h-10 w-10 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-      </svg>
-    </div>
-    <h1 className="text-3xl font-black text-white uppercase tracking-tighter">Transaction Confirmed</h1>
-    <p className="text-slate-500 font-mono mt-2 uppercase text-xs tracking-widest">Inventory successfully decremented</p>
-    <button 
-      onClick={() => window.location.href = '/warehouse'}
-      className="mt-8 px-8 py-3 bg-brand-accent text-brand-dark font-black uppercase tracking-widest rounded-xl hover:bg-teal-400 transition-all"
-    >
-      Return to Catalog
-    </button>
-  </div>
-);
-
-const Unauthorized = () => (
-  <div className="h-screen flex items-center justify-center text-white bg-brand-dark">
-    <div className="text-center">
-      <h1 className="text-6xl font-black text-red-500 mb-4 tracking-tighter">403</h1>
-      <p className="text-slate-400 uppercase tracking-widest text-xs font-mono">Security Breach: Terminal Restricted</p>
-      <button 
-        onClick={() => window.location.href = '/login'}
-        className="mt-8 px-6 py-2 border border-white/10 rounded-lg hover:bg-white/5 transition-colors text-xs uppercase font-bold"
-      >
-        Re-authenticate
-      </button>
-    </div>
-  </div>
-);
-
 export default function App() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  // Prevent flicker during session restoration
+  if (loading) return null;
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-brand-dark selection:bg-brand-accent selection:text-brand-dark">
+      <div className="min-h-screen bg-brand-dark">
         <CartDrawer />
 
         <Routes>
-          {/* --- Public/Auth Routes --- */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} /> {/* Added Route */}
+          {/* Public Routes */}
+          <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
+          <Route path="/register" element={!user ? <Register /> : <Navigate to="/" replace />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/verify-mfa" element={<MFAVerify />} />
-          <Route path="/unauthorized" element={<Unauthorized />} />
+          <Route path="/unauthorized" element={<div className="text-white p-20 text-center font-black">403 | RESTRICTED</div>} />
 
-          {/* --- Protected Routes --- */}
+          {/* Protected Routes */}
           <Route 
             path="/warehouse/*" 
             element={
@@ -81,26 +50,6 @@ export default function App() {
           />
 
           <Route 
-            path="/orders" 
-            element={
-              <RoleGuard allowedRoles={['CLERK', 'ADMIN', 'CUSTOMER']}>
-                <OrderManager />
-              </RoleGuard>
-            } 
-          />
-
-          <Route 
-            path="/checkout" 
-            element={
-              <RoleGuard allowedRoles={['CLERK', 'ADMIN', 'CUSTOMER']}>
-                <CheckoutPage />
-              </RoleGuard>
-            } 
-          />
-
-          <Route path="/dashboard/orders/success" element={<OrderSuccess />} />
-
-          <Route 
             path="/admin" 
             element={
               <RoleGuard allowedRoles={['ADMIN']}>
@@ -108,28 +57,23 @@ export default function App() {
               </RoleGuard>
             } 
           />
-          
-          <Route 
-            path="/admin/logs" 
-            element={
-              <RoleGuard allowedRoles={['ADMIN']}>
-                <AuditLogViewer />
-              </RoleGuard>
-            } 
-          />
 
+          {/* ROOT REDIRECTION LOGIC */}
           <Route 
             path="/" 
             element={
-              user ? (
-                user.role === 'ADMIN' ? <Navigate to="/admin" replace /> : <Navigate to="/warehouse" replace />
-              ) : (
+              !user ? (
                 <Navigate to="/login" replace />
+              ) : user.role === 'ADMIN' ? (
+                <Navigate to="/admin" replace />
+              ) : (
+                <Navigate to="/warehouse" replace />
               )
             } 
           />
 
-          <Route path="*" element={<Navigate to="/unauthorized" replace />} />
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </div>
     </ErrorBoundary>
