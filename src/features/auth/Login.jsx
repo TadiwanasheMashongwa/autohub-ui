@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from './AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom'; // Added Link
 import { Lock, Mail, Loader2 } from 'lucide-react';
 
 export default function Login() {
@@ -19,19 +19,11 @@ export default function Login() {
       const result = await login(email, password);
       
       if (result.success) {
-        if (result.mfaRequired) {
-           navigate('/verify-mfa', { state: { tempToken: result.tempToken, email: result.email } });
-           return;
-        }
-
-        // --- CRITICAL FIX: DYNAMIC REDIRECT ---
-        // Based on the decoded token from AuthContext
         if (result.role === 'ADMIN') {
-          navigate('/admin');     // Only Admins go here
+          navigate('/admin');
         } else {
-          navigate('/warehouse'); // Clerks, Managers, Warehouse staff go here
+          navigate('/warehouse');
         }
-        
       } else {
         setIsSubmitting(false);
       }
@@ -61,8 +53,8 @@ export default function Login() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-slate-900/50 border border-white/5 rounded-xl py-3.5 pl-10 pr-4 text-white placeholder-slate-600 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/20 transition-all"
-                placeholder="system.admin@autohub.com"
+                className="w-full bg-slate-900/50 border border-white/5 rounded-xl py-3.5 pl-10 pr-4 text-white placeholder-slate-600 focus:outline-none focus:border-brand-accent transition-all"
+                placeholder="operator@autohub.com"
               />
             </div>
             <div className="relative group">
@@ -72,23 +64,34 @@ export default function Login() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-900/50 border border-white/5 rounded-xl py-3.5 pl-10 pr-4 text-white placeholder-slate-600 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent/20 transition-all"
+                className="w-full bg-slate-900/50 border border-white/5 rounded-xl py-3.5 pl-10 pr-4 text-white placeholder-slate-600 focus:outline-none focus:border-brand-accent transition-all"
                 placeholder="••••••••"
               />
             </div>
           </div>
 
+          <div className="flex items-center justify-end">
+            <Link to="/forgot-password" size="sm" className="text-xs text-brand-accent hover:text-teal-400 font-bold uppercase tracking-tighter transition-colors">
+              Forgot Password?
+            </Link>
+          </div>
+
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-brand-dark bg-brand-accent font-black uppercase tracking-widest hover:bg-teal-400 active:scale-95 disabled:opacity-50 disabled:active:scale-100 transition-all shadow-lg shadow-brand-accent/10"
+            className="w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-brand-dark bg-brand-accent font-black uppercase tracking-widest hover:bg-teal-400 active:scale-95 disabled:opacity-50 transition-all shadow-lg shadow-brand-accent/10"
           >
-            {isSubmitting ? (
-              <Loader2 className="animate-spin h-5 w-5" />
-            ) : (
-              'Initialize Session'
-            )}
+            {isSubmitting ? <Loader2 className="animate-spin h-5 w-5" /> : 'Initialize Session'}
           </button>
+
+          <div className="text-center pt-4 border-t border-white/5">
+            <p className="text-xs text-slate-500 uppercase tracking-widest font-mono">
+              New Operator? {' '}
+              <Link to="/register" className="text-brand-accent hover:underline font-bold">
+                Create Account
+              </Link>
+            </p>
+          </div>
         </form>
       </div>
     </div>

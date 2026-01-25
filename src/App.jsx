@@ -4,6 +4,7 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 // --- Auth Components ---
 import Login from './features/auth/Login.jsx';
+import Register from './features/auth/Register.jsx'; // Added Import
 import MFAVerify from './features/auth/MFAVerify.jsx';
 import ForgotPassword from './features/auth/ForgotPassword.jsx';
 import ResetPassword from './features/auth/ResetPassword.jsx';
@@ -61,13 +62,15 @@ export default function App() {
         <CartDrawer />
 
         <Routes>
+          {/* --- Public/Auth Routes --- */}
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} /> {/* Added Route */}
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-mfa" element={<MFAVerify />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
 
-          {/* --- UPDATED: Added 'CUSTOMER' to these routes --- */}
+          {/* --- Protected Routes --- */}
           <Route 
             path="/warehouse/*" 
             element={
