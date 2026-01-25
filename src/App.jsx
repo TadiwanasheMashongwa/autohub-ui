@@ -72,11 +72,11 @@ export default function App() {
           <Route path="/verify-mfa" element={<MFAVerify />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
 
-          {/* --- Clerk & Admin Routes --- */}
+          {/* --- Customer & Clerk Routes (Updated to include 'USER') --- */}
           <Route 
             path="/warehouse/*" 
             element={
-              <RoleGuard allowedRoles={['CLERK', 'ADMIN']}>
+              <RoleGuard allowedRoles={['CLERK', 'ADMIN', 'USER']}>
                 <PartCatalog />
               </RoleGuard>
             } 
@@ -85,7 +85,7 @@ export default function App() {
           <Route 
             path="/orders" 
             element={
-              <RoleGuard allowedRoles={['CLERK', 'ADMIN']}>
+              <RoleGuard allowedRoles={['CLERK', 'ADMIN', 'USER']}>
                 <OrderManager />
               </RoleGuard>
             } 
@@ -94,7 +94,7 @@ export default function App() {
           <Route 
             path="/checkout" 
             element={
-              <RoleGuard allowedRoles={['CLERK', 'ADMIN']}>
+              <RoleGuard allowedRoles={['CLERK', 'ADMIN', 'USER']}>
                 <CheckoutPage />
               </RoleGuard>
             } 
@@ -139,4 +139,4 @@ export default function App() {
       </div>
     </ErrorBoundary>
   );
-}
+};

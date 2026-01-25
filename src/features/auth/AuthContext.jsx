@@ -53,11 +53,11 @@ export const AuthProvider = ({ children }) => {
       // 4. Decode Role
       const decoded = parseJwt(token);
       
-      // Look for 'role', 'roles', or 'authorities'
-      const rawRole = decoded?.role || decoded?.roles?.[0] || decoded?.authorities?.[0] || 'CLERK';
+      // Look for 'role', 'roles', or 'authorities'. Default to 'USER' if missing.
+      const rawRole = decoded?.role || decoded?.roles?.[0] || decoded?.authorities?.[0] || 'USER';
       
-      // Clean up role string
-      const role = typeof rawRole === 'string' ? rawRole.replace('ROLE_', '') : 'CLERK';
+      // Clean up role string (remove ROLE_ prefix)
+      const role = typeof rawRole === 'string' ? rawRole.replace('ROLE_', '') : 'USER';
 
       const userData = { email, role };
       
