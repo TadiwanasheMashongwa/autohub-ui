@@ -16,18 +16,22 @@ export default function Login() {
     setIsSubmitting(true);
 
     try {
-      // The AuthContext uses authApi, which now points to /api/v1/auth/login
       const result = await login(email, password);
       
       if (result.success) {
-        // Backend 'authenticate' endpoint currently returns direct token (No MFA challenge in provided Java code)
-        // If you add MFA later, we will uncomment the logic below.
-        /* if (result.mfaRequired) {
+        if (result.mfaRequired) {
            navigate('/verify-mfa', { state: { tempToken: result.tempToken, email: result.email } });
            return;
-        } 
-        */
-        navigate('/admin'); // Redirecting to Admin/Dashboard root
+        }
+
+        // --- CRITICAL FIX: DYNAMIC REDIRECT ---
+        // Based on the decoded token from AuthContext
+        if (result.role === 'ADMIN') {
+          navigate('/admin');     // Only Admins go here
+        } else {
+          navigate('/warehouse'); // Clerks, Managers, Warehouse staff go here
+        }
+        
       } else {
         setIsSubmitting(false);
       }

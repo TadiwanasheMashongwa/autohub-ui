@@ -1,10 +1,19 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-// Line 2 removed to prevent duplicate declaration
 import { toast } from '../../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { authApi } from '../../api/authApi.js'; // Keeping this one with the .js extension
+import { authApi } from '../../api/authApi.js'; 
 
 const AuthContext = createContext(null);
+
+// --- HELPER: DECODE JWT TOKEN ---
+// This reads the hidden data inside your backend token
+const parseJwt = (token) => {
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch (e) {
+    return null;
+  }
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -14,6 +23,8 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
+    
+    // Optional: Add logic here to check if token is expired
     if (storedUser && token) {
       setUser(JSON.parse(storedUser));
     }
@@ -22,41 +33,51 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      // 1. Call the API (This now points to /api/v1/auth/login)
+      // 1. Call Backend
       const data = await authApi.login({ email, password });
 
-      // 2. Check if MFA is required (Backend dependent)
+      // 2. Handle MFA (If your backend enables it later)
       if (data.mfa_enabled) {
         return { 
           success: true, 
           mfaRequired: true, 
-          tempToken: data.temp_token, // Adjust based on your exact JSON response keys
+          tempToken: data.temp_token, 
           email 
         };
       }
 
-      // 3. Success - Store Session
-      // Note: Adjust 'access_token' vs 'accessToken' based on your RegisterRequest/Response Java class
+      // 3. Extract Token
+      // Java backends sometimes call it 'access_token', sometimes 'accessToken'. We check both.
       const token = data.access_token || data.accessToken || data.token;
       const refreshToken = data.refresh_token || data.refreshToken;
       
       if (!token) throw new Error("No access token received from server");
 
-      const userData = { email, role: 'ADMIN' }; // You might want to decode the JWT here to get real role
+      // --- CRITICAL FIX: DECODE REAL ROLE ---
+      const decoded = parseJwt(token);
       
+      // We look for 'role', 'roles', or 'authorities' in the token payload
+      // Default to 'CLERK' if nothing is found to be safe.
+      const rawRole = decoded?.role || decoded?.roles?.[0] || decoded?.authorities?.[0] || 'CLERK';
+      
+      // Remove 'ROLE_' prefix if Java added it (e.g. ROLE_ADMIN -> ADMIN)
+      const role = rawRole.replace('ROLE_', '');
+
+      const userData = { email, role };
+      
+      // 4. Save Session
       localStorage.setItem('token', token);
       if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
       
       setUser(userData);
-      toast.show(`Welcome back, ${email}`, 'success');
+      toast.show(`Welcome, ${email}`, 'success');
       
-      return { success: true, mfaRequired: false };
+      // Return role so Login.jsx knows where to redirect
+      return { success: true, mfaRequired: false, role };
 
     } catch (error) {
       console.error("Login Failed:", error);
-      // The apiClient interceptor usually handles the toast, 
-      // but we return false here to stop the UI spinner.
       return { success: false, error: error.message };
     }
   };
