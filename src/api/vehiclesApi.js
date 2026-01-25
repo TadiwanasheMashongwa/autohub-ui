@@ -1,25 +1,29 @@
 import apiClient from './apiClient';
 
+/**
+ * Silicon Valley Grade: Vehicle Compatibility Service
+ * Explicit endpoints for the multi-step fitment funnel.
+ */
 export const vehiclesApi = {
-  // Consumes ENDPOINT #27
+  // Consumes VehicleController @GetMapping("/makes")
   getMakes: async () => {
     const response = await apiClient.get('/vehicles/makes');
     return response.data;
   },
 
-  // Consumes ENDPOINT #28
+  // Consumes VehicleController @GetMapping("/models")
   getModels: async (make) => {
-    const response = await apiClient.get(`/vehicles/models`, { params: { make } });
+    const response = await apiClient.get('/vehicles/models', { params: { make } });
     return response.data;
   },
 
-  // Consumes ENDPOINT #29
+  // Consumes VehicleController @GetMapping("/years")
   getYearRanges: async (make, model) => {
-    const response = await apiClient.get(`/vehicles/years`, { params: { make, model } });
+    const response = await apiClient.get('/vehicles/years', { params: { make, model } });
     return response.data;
   },
 
-  // Consumes GET /api/v1/vehicles (to find the final ID)
+  // Consumes GET /api/v1/vehicles (to resolve final ID mapping)
   getAll: async () => {
     const response = await apiClient.get('/vehicles');
     return response.data;
