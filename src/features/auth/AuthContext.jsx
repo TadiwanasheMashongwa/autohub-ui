@@ -6,7 +6,6 @@ import { authApi } from '../../api/authApi.js';
 const AuthContext = createContext(null);
 
 // --- HELPER: DECODE JWT TOKEN ---
-// This reads the hidden data inside your backend token
 const parseJwt = (token) => {
   try {
     return JSON.parse(atob(token.split('.')[1]));
@@ -24,7 +23,6 @@ export const AuthProvider = ({ children }) => {
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
     
-    // Optional: Add logic here to check if token is expired
     if (storedUser && token) {
       setUser(JSON.parse(storedUser));
     }
@@ -36,7 +34,7 @@ export const AuthProvider = ({ children }) => {
       // 1. Call Backend
       const data = await authApi.login({ email, password });
 
-      // 2. Handle MFA (If your backend enables it later)
+      // 2. Handle MFA
       if (data.mfa_enabled) {
         return { 
           success: true, 
@@ -47,25 +45,23 @@ export const AuthProvider = ({ children }) => {
       }
 
       // 3. Extract Token
-      // Java backends sometimes call it 'access_token', sometimes 'accessToken'. We check both.
       const token = data.access_token || data.accessToken || data.token;
       const refreshToken = data.refresh_token || data.refreshToken;
       
       if (!token) throw new Error("No access token received from server");
 
-      // --- CRITICAL FIX: DECODE REAL ROLE ---
+      // 4. Decode Role
       const decoded = parseJwt(token);
       
-      // We look for 'role', 'roles', or 'authorities' in the token payload
-      // Default to 'CLERK' if nothing is found to be safe.
+      // Look for 'role', 'roles', or 'authorities'
       const rawRole = decoded?.role || decoded?.roles?.[0] || decoded?.authorities?.[0] || 'CLERK';
       
-      // Remove 'ROLE_' prefix if Java added it (e.g. ROLE_ADMIN -> ADMIN)
-      const role = rawRole.replace('ROLE_', '');
+      // Clean up role string
+      const role = typeof rawRole === 'string' ? rawRole.replace('ROLE_', '') : 'CLERK';
 
       const userData = { email, role };
       
-      // 4. Save Session
+      // 5. Save Session
       localStorage.setItem('token', token);
       if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
@@ -73,7 +69,6 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       toast.show(`Welcome, ${email}`, 'success');
       
-      // Return role so Login.jsx knows where to redirect
       return { success: true, mfaRequired: false, role };
 
     } catch (error) {
