@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Lock, Loader2, ShieldCheck } from 'lucide-react';
+import { Lock, Loader2, ShieldCheck, AlertCircle } from 'lucide-react';
 import { toast } from '../../context/NotificationContext';
 
 export default function ResetPassword() {
@@ -12,8 +12,14 @@ export default function ResetPassword() {
   const { resetPassword } = useAuth();
   const navigate = useNavigate();
 
-  // Extracting token from URL: ?token=XYZ
+  // Automatically extracts ?token=... from the URL
   const token = searchParams.get('token');
+
+  useEffect(() => {
+    if (!token) {
+      toast.show("No reset token found. Please use the link from your email.", "error");
+    }
+  }, [token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,18 +33,35 @@ export default function ResetPassword() {
     }
     
     if (!token) {
-      return toast.show("Security token missing. Please use the link in your email.", "error");
+      return toast.show("Invalid or missing token.", "error");
     }
 
     setIsSubmitting(true);
-    const result = await resetPassword(token, newPassword);
-    
-    if (result.success) {
-      toast.show("Credentials updated. Session initialized.", "success");
-      navigate('/login');
+    try {
+      const result = await resetPassword(token, newPassword);
+      if (result.success) {
+        toast.show("Credentials updated successfully.", "success");
+        navigate('/login');
+      }
+    } catch (error) {
+      console.error("Reset Error:", error);
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
+
+  if (!token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-brand-dark px-4">
+        <div className="text-center p-8 bg-white/5 rounded-2xl border border-red-500/20 max-w-sm">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-white uppercase">Link Invalid</h2>
+          <p className="text-slate-400 mt-2 text-sm">This reset terminal requires a valid security token from your email.</p>
+          <button onClick={() => navigate('/login')} className="mt-6 text-brand-accent font-bold uppercase text-xs">Return to Login</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-brand-dark px-4 font-sans">
@@ -78,7 +101,7 @@ export default function ResetPassword() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full mt-6 flex justify-center py-3.5 px-4 rounded-xl text-brand-dark bg-brand-accent font-black uppercase tracking-widest hover:bg-teal-400 active:scale-95 disabled:opacity-50 transition-all shadow-lg shadow-brand-accent/20"
+            className="w-full mt-6 flex justify-center py-3.5 px-4 rounded-xl text-brand-dark bg-brand-accent font-black uppercase tracking-widest hover:bg-teal-400 active:scale-95 disabled:opacity-50 transition-all shadow-lg"
           >
             {isSubmitting ? <Loader2 className="animate-spin h-5 w-5" /> : 'Finalize Update'}
           </button>

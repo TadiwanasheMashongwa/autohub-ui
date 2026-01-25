@@ -11,7 +11,6 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
-    
     if (storedUser && token) {
       setUser(JSON.parse(storedUser));
     }
@@ -21,60 +20,51 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const data = await authApi.login({ email, password });
-      if (data.mfa_enabled) {
-        return { success: true, mfaRequired: true, tempToken: data.temp_token, email };
+
+      // Detect MFA status from AuthenticationService.java
+      if (data.accessToken === "MFA_REQUIRED") {
+        return { success: true, mfaRequired: true, email };
       }
 
+      // Standard DTO Mapping
       const token = data.accessToken;
       const refreshToken = data.refreshToken;
-      const rawRole = data.role;
+      const role = data.role.replace('ROLE_', '');
       
-      if (!token) throw new Error("Security Error: Access token missing.");
-
-      const role = typeof rawRole === 'string' ? rawRole.replace('ROLE_', '') : 'CUSTOMER';
       const userData = { email: data.username, role };
       
       localStorage.setItem('token', token);
-      if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem('refreshToken', refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
       
       setUser(userData);
-      toast.show(`Access Granted: ${role} Profile`, 'success');
+      toast.show(`Operator Authenticated: ${role} Profile`, 'success');
       return { success: true, mfaRequired: false, role };
     } catch (error) {
-      console.error("Auth Failure:", error);
-      toast.show(error.response?.data?.message || "Login failed", "error");
       return { success: false, error: error.message };
     }
   };
 
-  /**
-   * Silicon Valley Grade: Password Recovery Flow
-   */
-  const requestPasswordReset = async (email) => {
+  const verifyMfaAction = async (email, code) => {
     try {
-      await authApi.initiatePasswordReset(email);
-      // We return success even if email doesn't exist to prevent account enumeration (security best practice)
-      return { success: true };
-    } catch (error) {
-      console.error("Reset Request Failure:", error);
-      return { success: false, error: error.message };
-    }
-  };
+      const data = await authApi.verifyMfa({ email, code });
+      const role = data.role.replace('ROLE_', '');
+      const userData = { email: data.username, role };
 
-  const resetPassword = async (token, newPassword) => {
-    try {
-      await authApi.completePasswordReset(token, newPassword);
-      return { success: true };
+      localStorage.setItem('token', data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      setUser(userData);
+      return { success: true, role };
     } catch (error) {
-      console.error("Reset Completion Failure:", error);
-      toast.show(error.response?.data?.message || "Failed to update password", "error");
       return { success: false, error: error.message };
     }
   };
 
   const logout = () => {
-    authApi.logout().catch(() => console.warn("Session termination notify failed."));
+    const userEmail = user?.email;
+    if (userEmail) authApi.logout(userEmail).catch(() => {});
     localStorage.clear();
     setUser(null);
     window.location.href = '/login';
@@ -82,12 +72,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ 
-      user, 
-      login, 
-      logout, 
-      loading, 
-      requestPasswordReset, 
-      resetPassword 
+      user, login, logout, loading, verifyMfaAction 
     }}>
       {!loading && children}
     </AuthContext.Provider>

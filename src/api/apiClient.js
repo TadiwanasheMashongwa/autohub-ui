@@ -15,52 +15,49 @@ apiClient.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
-}, (error) => {
-  return Promise.reject(error);
-});
+}, (error) => Promise.reject(error));
 
-// Response Interceptor: Global Error Handling & Token Refresh
+// Response Interceptor: Rotation & Error Handling
 apiClient.interceptors.response.use(
-  (response) => {
-    // Optional: Show success messages for specific methods
-    if (response.config.method !== 'get' && response.data?.message) {
-      toast.show(response.data.message, 'success');
-    }
-    return response;
-  },
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    const errorMessage = error.response?.data?.message || "Server connection failed";
 
-    // 1. Handle Token Expiration (401)
+    // 1. Handle Token Expiration (401) + Rotation
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        // Direct axios call to avoid interceptor loop
-        const res = await axios.post('/api/v1/auth/refresh-token', { refreshToken });
+        const currentRefreshToken = localStorage.getItem('refreshToken');
         
-        const { accessToken } = res.data;
+        // Silicon Valley Grade: Rotation logic
+        // We call the /auth/refresh endpoint defined in your controller
+        const res = await axios.post('/api/v1/auth/refresh', { refreshToken: currentRefreshToken });
+        
+        // Capture BOTH new tokens from the rotation
+        const { accessToken, refreshToken } = res.data;
+        
         localStorage.setItem('token', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
         
         apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
+        // Rotation failed (likely reuse detection or expiry)
         localStorage.clear();
-        window.location.href = '/login';
-        toast.show("Session expired. Please login again.", 'error');
+        window.location.href = '/login?expired=true';
         return Promise.reject(refreshError);
       }
     }
 
-    // 2. Handle 403 Forbidden (RBAC Failures)
+    // 2. Handle 403 Forbidden
     if (error.response?.status === 403) {
-      toast.show("Access Denied: Insufficient permissions.", 'error');
+      toast.show("Access Denied: Terminal Restricted", 'error');
     } 
     
-    // 3. Handle General Errors (Stock issues, Validation, etc)
+    // 3. Handle Generic Errors
     else {
-      toast.show(errorMessage, 'error');
+      const msg = error.response?.data?.message || "Connection Interrupted";
+      toast.show(msg, 'error');
     }
 
     return Promise.reject(error);

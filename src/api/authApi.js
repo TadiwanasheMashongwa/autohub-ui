@@ -1,37 +1,36 @@
 import apiClient from './apiClient';
-import { AUTH_URLS } from './endpoints';
 
 export const authApi = {
   login: async (credentials) => {
-    const response = await apiClient.post(AUTH_URLS.LOGIN, credentials);
+    const response = await apiClient.post('/auth/login', credentials);
     return response.data; 
   },
 
   register: async (userData) => {
-    const response = await apiClient.post(AUTH_URLS.REGISTER, userData);
+    const response = await apiClient.post('/auth/register', userData);
     return response.data;
   },
 
   verifyMfa: async (data) => {
-    const response = await apiClient.post(AUTH_URLS.VERIFY_MFA, data);
+    // Matches public AuthenticationResponse verifyMfa(String email, String code)
+    const response = await apiClient.post('/auth/verify-mfa', data);
     return response.data;
   },
 
-  logout: async () => {
-    return apiClient.post(AUTH_URLS.LOGOUT);
+  logout: async (email) => {
+    return apiClient.post('/auth/logout', { email });
   },
 
   initiatePasswordReset: async (email) => {
-    // Matches @PostMapping("/forgot-password") - sends Map.of("email", email)
-    return apiClient.post(AUTH_URLS.FORGOT_PASSWORD, { email });
+    return apiClient.post('/auth/forgot-password', { email });
   },
 
   completePasswordReset: async (token, newPassword) => {
-    // Matches @PostMapping("/reset-password") - sends Map.of("token", token, "newPassword", newPassword)
-    return apiClient.post(AUTH_URLS.RESET_PASSWORD, { token, newPassword });
+    return apiClient.post('/auth/reset-password', { token, newPassword });
   },
 
   refreshToken: async (token) => {
-    return apiClient.post(AUTH_URLS.REFRESH, { refreshToken: token });
+    // Matches @Transactional refreshToken endpoint
+    return apiClient.post('/auth/refresh', { refreshToken: token });
   }
 };
