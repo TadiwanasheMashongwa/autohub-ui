@@ -2,7 +2,6 @@ import axios from 'axios';
 import { toast } from '../context/NotificationContext';
 
 const apiClient = axios.create({
-  // Force absolute URL to prevent Vite from hitting the wrong port
   baseURL: 'http://localhost:8080/api/v1', 
   headers: {
     'Content-Type': 'application/json',
@@ -11,9 +10,13 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token) {
+  
+  // SILICON VALLEY GRADE: Anti-Trash Token Guard
+  // Prevents sending 'Bearer null' or 'Bearer undefined' which triggers 400 Errors
+  if (token && token !== 'undefined' && token !== 'null') {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  
   return config;
 }, (error) => Promise.reject(error));
 
@@ -27,7 +30,7 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
       try {
         const currentRefreshToken = localStorage.getItem('refreshToken');
-        if (!currentRefreshToken) throw new Error("No refresh token");
+        if (!currentRefreshToken || currentRefreshToken === 'null') throw new Error("No refresh token");
 
         const res = await axios.post('http://localhost:8080/api/v1/auth/refresh', { 
           refreshToken: currentRefreshToken 
@@ -48,7 +51,7 @@ apiClient.interceptors.response.use(
 
     if (error.response?.status === 403) {
       toast.show("Access Denied: Terminal Restricted", 'error');
-    } else if (!isValidationCall && error.response?.status !== 401) {
+    } else if (!isValidationCall && error.response?.status !== 401 && error.response?.status !== 400) {
       const msg = error.response?.data?.message || "Internal System Error";
       toast.show(msg, 'error');
     }
