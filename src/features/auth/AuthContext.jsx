@@ -7,10 +7,11 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const initialized = useRef(false); // Prevents double-init in Strict Mode
+  const initialized = useRef(false);
 
   useEffect(() => {
     const init = async () => {
+      // Prevent double-execution in React Strict Mode
       if (initialized.current) return;
       initialized.current = true;
 
@@ -22,29 +23,26 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        console.log("AUTH_LOG: Initializing session...");
+        console.log("AUTH_LOG: Recovering session...");
+        
+        // This call will be automatically intercepted and retried by apiClient.js
+        // if the token is expired. We only catch if the refresh also fails.
         const data = await authApi.getProfile();
         
         const identifier = data.username || data.email;
         const cleanRole = (data.role || 'CUSTOMER').replace('ROLE_', '');
 
         if (identifier) {
-          const userData = { email: identifier, role: cleanRole };
-          setUser(userData);
-          console.log("AUTH_LOG: Session restored for:", identifier);
+          setUser({ email: identifier, role: cleanRole });
+          console.log("AUTH_LOG: Identity verified.");
         }
       } catch (error) {
-        console.error("AUTH_LOG: Initialization error:", error.response?.status, error.message);
+        console.error("AUTH_LOG: Session recovery failed permanently.");
         
-        // SILICON VALLEY GRADE: Granular Recovery
-        // We ONLY wipe storage if the backend explicitly says the token is revoked (401/403)
-        // If it's a 400, 500, or Network error, we KEEP the token so the user can try again
+        // Only clear if the server explicitly rejected the final attempt
         if (error.response?.status === 401 || error.response?.status === 403) {
-          console.warn("AUTH_LOG: Session revoked by server. Clearing storage.");
           localStorage.clear();
           setUser(null);
-        } else {
-          console.warn("AUTH_LOG: Temporary error. Retaining session for retry.");
         }
       } finally {
         setLoading(false);
@@ -62,7 +60,6 @@ export const AuthProvider = ({ children }) => {
       
       localStorage.setItem('token', data.accessToken);
       localStorage.setItem('refreshToken', data.refreshToken);
-      localStorage.setItem('user', JSON.stringify(userData));
       
       setUser(userData);
       return { success: true, role: cleanRole };
