@@ -26,14 +26,18 @@ export default function OrderSuccess() {
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-3xl font-black text-white uppercase tracking-tighter">Settlement <span className="text-brand-accent">Confirmed</span></h1>
-          <p className="text-slate-400 text-sm">Your order has been transmitted to the warehouse for picking and fulfillment.</p>
+          <h1 className="text-3xl font-black text-white uppercase tracking-tighter">
+            Settlement <span className="text-brand-accent">Confirmed</span>
+          </h1>
+          <p className="text-slate-400 text-sm italic">
+            Your transaction has been finalized and the manifest transmitted to the warehouse.
+          </p>
         </div>
 
         <div className="bg-white/5 p-4 rounded-xl border border-white/5 flex items-center justify-between">
           <div className="text-left">
-            <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Status</p>
-            <p className="text-brand-accent font-bold uppercase text-xs">Awaiting Picking</p>
+            <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Initial Status</p>
+            <p className="text-brand-accent font-bold uppercase text-xs">Awaiting Fulfillment</p>
           </div>
           <Printer className="h-5 w-5 text-slate-500 hover:text-white cursor-pointer transition-colors" />
         </div>
@@ -43,14 +47,14 @@ export default function OrderSuccess() {
             onClick={() => navigate('/orders')}
             className="w-full py-4 bg-white text-brand-dark font-black uppercase tracking-widest rounded-xl hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
           >
-            Track in History <Package className="h-4 w-4" />
+            Review Manifests <Package className="h-4 w-4" />
           </button>
           
           <button 
             onClick={() => navigate('/warehouse')}
             className="w-full py-4 bg-transparent text-slate-400 font-bold uppercase tracking-widest rounded-xl hover:text-white transition-all flex items-center justify-center gap-2 text-xs"
           >
-            Return to Warehouse <ArrowRight className="h-4 w-4" />
+            Return to Fleet Catalog <ArrowRight className="h-4 w-4" />
           </button>
         </div>
       </div>
