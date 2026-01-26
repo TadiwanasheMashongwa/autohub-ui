@@ -2,13 +2,13 @@ import axios from 'axios';
 import { toast } from '../context/NotificationContext';
 
 const apiClient = axios.create({
-  baseURL: '/api/v1',
+  // Force absolute URL to prevent Vite from hitting the wrong port
+  baseURL: 'http://localhost:8080/api/v1', 
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request Interceptor
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -17,46 +17,38 @@ apiClient.interceptors.request.use((config) => {
   return config;
 }, (error) => Promise.reject(error));
 
-// Response Interceptor
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    // Identify background validation calls to suppress noisy errors
     const isValidationCall = originalRequest.url.includes('/auth/me');
 
-    // 1. Handle Token Expiration (401) + Rotation
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
         const currentRefreshToken = localStorage.getItem('refreshToken');
-        if (!currentRefreshToken) throw new Error("No refresh token available");
+        if (!currentRefreshToken) throw new Error("No refresh token");
 
-        const res = await axios.post('/api/v1/auth/refresh', { refreshToken: currentRefreshToken });
+        const res = await axios.post('http://localhost:8080/api/v1/auth/refresh', { 
+          refreshToken: currentRefreshToken 
+        });
         
         const { accessToken, refreshToken } = res.data;
         localStorage.setItem('token', accessToken);
         localStorage.setItem('refreshToken', refreshToken);
         
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
         localStorage.clear();
-        if (!isValidationCall) {
-          window.location.href = '/login?expired=true';
-        }
+        if (!isValidationCall) window.location.href = '/login?expired=true';
         return Promise.reject(refreshError);
       }
     }
 
-    // 2. Handle 403 Forbidden (RBAC)
     if (error.response?.status === 403) {
       toast.show("Access Denied: Terminal Restricted", 'error');
-    } 
-    
-    // 3. General Error Suppression
-    // We only show a toast if it's NOT a background validation call
-    else if (!isValidationCall) {
+    } else if (!isValidationCall && error.response?.status !== 401) {
       const msg = error.response?.data?.message || "Internal System Error";
       toast.show(msg, 'error');
     }
