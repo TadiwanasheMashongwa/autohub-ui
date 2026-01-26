@@ -10,9 +10,10 @@ import PartDetail from './features/catalog/PartDetail.jsx';
 import AdminDashboard from './features/dashboard/AdminDashboard.jsx';
 import RoleGuard from './routes/RoleGuard.jsx';
 
-// CHECKLIST Step 3: Import Cart & Checkout Components
+// CHECKLIST Step 3: Import Cart, Checkout, and Drawer Components
 import CartPage from './features/checkout/CartPage.jsx';
 import CheckoutPage from './features/checkout/CheckoutPage.jsx';
+import CartDrawer from './features/checkout/CartDrawer.jsx'; // NEW: Added Drawer
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -26,6 +27,12 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className={`flex-1 transition-all ${user ? 'ml-64' : ''}`}>
+        
+        {/* CHECKLIST Step 3: Global UI Component 
+            The Drawer must be rendered here so it can slide out over any page
+        */}
+        {user && <CartDrawer />}
+
         <Routes>
           {/* Public */}
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
