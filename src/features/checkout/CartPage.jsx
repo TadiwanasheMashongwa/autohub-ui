@@ -14,7 +14,7 @@ import {
 export default function CartPage() {
   const { cart, removeItem, updateQuantity, loading } = useCart();
 
-  // 1. Loading State: Prevents layout shift during re-hydration
+  // 1. Initial Loading State
   if (loading && !cart) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center space-y-4">
@@ -24,7 +24,7 @@ export default function CartPage() {
     );
   }
 
-  // 2. Empty State Logic: Verified Step 3 of Checklist
+  // 2. Empty State Logic
   if (!cart || !cart.items || cart.items.length === 0) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center space-y-6 text-center">
@@ -65,9 +65,7 @@ export default function CartPage() {
           {cart.items.map((item) => (
             <div 
               key={item.id} 
-              className={`bg-white/5 border border-white/5 p-6 rounded-2xl flex flex-col sm:flex-row items-center gap-6 group hover:border-brand-accent/20 transition-all ${
-                loading ? 'opacity-50 pointer-events-none' : ''
-              }`}
+              className="bg-white/5 border border-white/5 p-6 rounded-2xl flex flex-col sm:flex-row items-center gap-6 group hover:border-brand-accent/20 transition-all"
             >
               {/* Part Visualizer */}
               <div className="h-24 w-24 bg-black/40 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-white/5">
@@ -99,7 +97,7 @@ export default function CartPage() {
               <div className="flex items-center gap-4 bg-black/40 p-1 rounded-xl border border-white/5">
                 <button 
                   onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                  disabled={item.quantity <= 1}
+                  disabled={loading || item.quantity <= 1}
                   className="p-2 text-slate-400 hover:text-white disabled:opacity-30"
                 >
                   <Minus className="h-4 w-4" />
@@ -109,7 +107,8 @@ export default function CartPage() {
                 </span>
                 <button 
                   onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                  className="p-2 text-slate-400 hover:text-white"
+                  disabled={loading}
+                  className="p-2 text-slate-400 hover:text-white disabled:opacity-30"
                 >
                   <Plus className="h-4 w-4" />
                 </button>
@@ -118,7 +117,8 @@ export default function CartPage() {
               {/* Destructive Action */}
               <button 
                 onClick={() => removeItem(item.id)}
-                className="text-slate-600 hover:text-red-500 transition-colors p-4"
+                disabled={loading}
+                className="text-slate-600 hover:text-red-500 transition-colors p-4 disabled:opacity-30"
               >
                 <Trash2 className="h-5 w-5" />
               </button>
@@ -151,11 +151,10 @@ export default function CartPage() {
               </span>
             </div>
 
+            {/* FIXED: Removed the loading-based pointer-events and opacity blocks */}
             <Link 
               to="/checkout"
-              className={`w-full flex items-center justify-center gap-3 py-5 bg-brand-accent text-brand-dark font-black uppercase tracking-widest rounded-xl hover:bg-teal-400 hover:scale-[1.02] active:scale-[0.98] transition-all ${
-                loading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className="w-full flex items-center justify-center gap-3 py-5 bg-brand-accent text-brand-dark font-black uppercase tracking-widest rounded-xl hover:bg-teal-400 hover:scale-[1.02] active:scale-[0.98] transition-all"
             >
               <CreditCard className="h-5 w-5" /> Final Settlement
             </Link>
