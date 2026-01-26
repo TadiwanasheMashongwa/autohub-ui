@@ -28,9 +28,10 @@ export default function CartDrawer() {
                 cart.items.map((item) => (
                   <div key={item.id} className="flex gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
                     <div className="flex-1">
-                      <h4 className="text-white font-bold text-sm truncate">{item.partName}</h4>
+                      {/* FIX: Nested Part Access */}
+                      <h4 className="text-white font-bold text-sm truncate">{item.part.name}</h4>
                       <p className="text-[10px] text-slate-500 font-mono uppercase">Qty: {item.quantity}</p>
-                      <p className="text-brand-accent font-bold mt-1">${item.price.toFixed(2)}</p>
+                      <p className="text-brand-accent font-bold mt-1">${item.part.price.toFixed(2)}</p>
                     </div>
                     <button 
                       onClick={() => removeItem(item.id)}

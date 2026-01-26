@@ -10,6 +10,10 @@ import PartDetail from './features/catalog/PartDetail.jsx';
 import AdminDashboard from './features/dashboard/AdminDashboard.jsx';
 import RoleGuard from './routes/RoleGuard.jsx';
 
+// CHECKLIST Step 3: Import Cart & Checkout Components
+import CartPage from './features/checkout/CartPage.jsx';
+import CheckoutPage from './features/checkout/CheckoutPage.jsx';
+
 export default function App() {
   const { user, loading } = useAuth();
 
@@ -38,6 +42,19 @@ export default function App() {
           <Route path="/warehouse/parts/:id" element={
             <RoleGuard allowedRoles={['ADMIN', 'CLERK', 'CUSTOMER']}>
               <PartDetail />
+            </RoleGuard>
+          } />
+
+          {/* CHECKLIST Step 3: Shopping Cart & Checkout Routes */}
+          <Route path="/cart" element={
+            <RoleGuard allowedRoles={['CUSTOMER']}>
+              <CartPage />
+            </RoleGuard>
+          } />
+
+          <Route path="/checkout" element={
+            <RoleGuard allowedRoles={['CUSTOMER']}>
+              <CheckoutPage />
             </RoleGuard>
           } />
 
