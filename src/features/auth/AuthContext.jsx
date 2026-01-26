@@ -13,10 +13,19 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (token) {
         try {
+          // Verify identity with the backend /me endpoint
           const data = await authApi.getProfile();
-          setUser({ email: data.username, role: data.role.replace('ROLE_', '') });
-        } catch {
+          
+          // RE-HYDRATION: Clean the ROLE_ prefix and restore state
+          const userData = { 
+            email: data.username, 
+            role: data.role.replace('ROLE_', '') 
+          };
+          setUser(userData);
+        } catch (error) {
+          console.error("Session re-hydration failed", error);
           localStorage.clear();
+          setUser(null);
         }
       }
       setLoading(false);
@@ -43,7 +52,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await authApi.logout(); // Backend endpoint POST /auth/logout
+      await authApi.logout();
     } finally {
       localStorage.clear();
       setUser(null);
