@@ -23,7 +23,8 @@ export default function PartCatalog() {
     setLoading(true);
     try {
       let data;
-      // LOGIC FIX: We must pass activeFilters (brand/condition) to the API calls
+      
+      // Coordination Logic: Ensuring Manufacturer/Condition follow the user
       if (selectedVehicle) {
         data = await partsApi.getPartsByVehicle(selectedVehicle.id, page);
       } else if (searchQuery) {
@@ -37,7 +38,7 @@ export default function PartCatalog() {
       setParts(data.content || []);
       setTotalPages(data.totalPages || 0);
     } catch (error) {
-      toast.show("Link Failure: Re-syncing Terminal", "error");
+      toast.show("Inventory Link Failure: Synchronizing...", "error");
     } finally {
       setLoading(false);
     }
@@ -66,9 +67,10 @@ export default function PartCatalog() {
             <h2 className="text-4xl font-black text-white uppercase tracking-tighter italic">
               {isStaff ? 'Inventory Management' : 'Parts Catalog'}
             </h2>
-            <p className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.5em]">
-              {isStaff ? 'Internal Logistics Link' : 'Premium Parts Fulfillment'}
-            </p>
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 bg-brand-accent rounded-full animate-pulse" />
+              <p className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.5em]">Live Sector Sync</p>
+            </div>
           </div>
 
           <div className="relative group w-full max-w-xl">
@@ -92,29 +94,30 @@ export default function PartCatalog() {
             {parts.map(part => <PartCard key={part.id} part={part} />)}
           </div>
         ) : (
-          <div className="h-[40vh] flex flex-col items-center justify-center opacity-50 text-slate-500">
-            <PackageSearch className="h-16 w-16 mb-4" />
-            <p className="uppercase font-black text-xs tracking-widest">No matching assets in this sector</p>
+          <div className="h-[40vh] flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] bg-white/[0.02]">
+            <PackageSearch className="h-16 w-16 mb-4 text-slate-800" />
+            <p className="text-white font-black uppercase text-xs tracking-widest">No matching assets in this sector</p>
           </div>
         )}
 
         {totalPages > 1 && (
-          <div className="mt-12 flex justify-center gap-4">
+          <footer className="mt-16 flex items-center justify-center gap-6 pt-10 border-t border-white/5">
             <button 
               disabled={page === 0} 
               onClick={() => setPage(p => p - 1)}
-              className="px-4 py-2 bg-white/5 rounded-xl text-white disabled:opacity-20"
+              className="h-12 w-12 flex items-center justify-center rounded-2xl bg-white/5 text-slate-400 hover:text-brand-accent disabled:opacity-20 transition-all"
             >
-              <ChevronLeft />
+              <ChevronLeft className="h-5 w-5" />
             </button>
+            <span className="text-sm font-black text-white font-mono">{page + 1} / {totalPages}</span>
             <button 
               disabled={page >= totalPages - 1} 
               onClick={() => setPage(p => p + 1)}
-              className="px-4 py-2 bg-white/5 rounded-xl text-white disabled:opacity-20"
+              className="h-12 w-12 flex items-center justify-center rounded-2xl bg-white/5 text-slate-400 hover:text-brand-accent disabled:opacity-20 transition-all"
             >
-              <ChevronRight />
+              <ChevronRight className="h-5 w-5" />
             </button>
-          </div>
+          </footer>
         )}
       </div>
     </div>
