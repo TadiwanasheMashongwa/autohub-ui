@@ -21,10 +21,12 @@ export default function PartCatalog() {
 
   const fetchInventory = useCallback(async () => {
     setLoading(true);
+    // CRITICAL: Flush state to prevent "Duplicate Key" errors during re-renders
+    setParts([]); 
+    
     try {
       let data;
       
-      // Coordination Logic: Ensuring Manufacturer/Condition follow the user
       if (selectedVehicle) {
         data = await partsApi.getPartsByVehicle(selectedVehicle.id, page);
       } else if (searchQuery) {
@@ -53,13 +55,19 @@ export default function PartCatalog() {
     <div className="flex bg-brand-dark min-h-screen">
       <PartFilters 
         activeFilters={activeFilters}
-        onFilterChange={(f) => { setActiveFilters(f); setPage(0); }}
+        onFilterChange={(f) => { 
+          setActiveFilters(f); 
+          setPage(0); 
+        }}
       />
 
       <div className="flex-1 px-10 py-10 max-w-[1600px] mx-auto">
         <VehicleSelector 
           selectedVehicle={selectedVehicle}
-          onVehicleSelect={(v) => { setSelectedVehicle(v); setPage(0); }}
+          onVehicleSelect={(v) => { 
+            setSelectedVehicle(v); 
+            setPage(0); 
+          }}
         />
 
         <header className="mb-12 flex flex-col xl:flex-row xl:items-center justify-between gap-8">
@@ -80,7 +88,10 @@ export default function PartCatalog() {
               placeholder={isStaff ? "Search SKU, OEM, or Bin Location..." : "Search for high-performance parts..."}
               className="w-full bg-white/5 border border-white/10 rounded-2xl py-4.5 pl-14 pr-6 text-white focus:outline-none focus:border-brand-accent/40 transition-all shadow-2xl font-medium"
               value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
+              onChange={(e) => { 
+                setSearchQuery(e.target.value); 
+                setPage(0); 
+              }}
             />
           </div>
         </header>

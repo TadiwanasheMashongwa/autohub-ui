@@ -2,38 +2,30 @@ import apiClient from './apiClient';
 
 export const partsApi = {
   getParts: async (page = 0, filters = {}) => {
-    // We send filters as query params
-    const response = await apiClient.get('/parts', { 
-      params: { 
-        page, 
-        size: 12, 
-        brand: filters.brand || undefined, 
-        condition: filters.condition || undefined 
-      } 
-    });
+    // Silicon Valley Grade: Clean params to avoid sending 'undefined' strings
+    const params = { page, size: 12 };
+    if (filters.brand) params.brand = filters.brand;
+    if (filters.condition) params.condition = filters.condition;
+
+    const response = await apiClient.get('/parts', { params });
     return response.data;
   },
 
   searchParts: async (query, page = 0, filters = {}) => {
-    const response = await apiClient.get('/parts/search', { 
-      params: { 
-        query, 
-        page, 
-        brand: filters.brand || undefined, 
-        condition: filters.condition || undefined 
-      } 
-    });
+    const params = { query, page, size: 12 };
+    if (filters.brand) params.brand = filters.brand;
+    if (filters.condition) params.condition = filters.condition;
+
+    const response = await apiClient.get('/parts/search', { params });
     return response.data;
   },
 
   getPartsByCategory: async (categoryId, page = 0, filters = {}) => {
-    const response = await apiClient.get(`/parts/category/${categoryId}`, { 
-      params: { 
-        page, 
-        brand: filters.brand || undefined, 
-        condition: filters.condition || undefined 
-      } 
-    });
+    const params = { page, size: 12 };
+    if (filters.brand) params.brand = filters.brand;
+    if (filters.condition) params.condition = filters.condition;
+
+    const response = await apiClient.get(`/parts/category/${categoryId}`, { params });
     return response.data;
   },
 
@@ -43,7 +35,9 @@ export const partsApi = {
   },
 
   getPartsByVehicle: async (vehicleId, page = 0) => {
-    const response = await apiClient.get(`/parts/vehicle/${vehicleId}`, { params: { page } });
+    const response = await apiClient.get(`/parts/vehicle/${vehicleId}`, { 
+      params: { page, size: 12 } 
+    });
     return response.data;
   }
 };
