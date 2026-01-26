@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { partsApi } from '../../api/partsApi';
 import { useAuth } from '../auth/AuthContext';
+import { useCart } from '../../context/CartContext'; // NEW
 import { 
   ChevronLeft, ShoppingCart, ShieldCheck, 
   Weight, Maximize, Settings, Box, 
-  Star, Truck, AlertCircle, Loader2, MapPin,
-  MessageSquare, User
+  Star, Loader2, MapPin,
+  MessageSquare, User, Plus, Minus
 } from 'lucide-react';
 import { toast } from '../../context/NotificationContext';
 
@@ -14,11 +15,13 @@ export default function PartDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { addItem } = useCart(); // NEW
   
   const isStaff = user?.role === 'ADMIN' || user?.role === 'CLERK';
   
   const [part, setPart] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [quantity, setQuantity] = useState(1); // NEW
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -101,7 +104,7 @@ export default function PartDetail() {
             </div>
           </header>
 
-          {/* Fulfillment Terminal */}
+          {/* CHECKLIST STEP 3: Fulfillment Terminal with Quantity Selector */}
           <div className="bg-white/5 border border-white/10 rounded-[3rem] p-8 mb-12 shadow-2xl">
             <div className="flex items-end justify-between mb-8">
               <div>
@@ -117,13 +120,33 @@ export default function PartDetail() {
               </div>
             </div>
 
-            <button 
-              disabled={!inStock}
-              className="w-full bg-brand-accent hover:bg-emerald-400 disabled:opacity-20 disabled:grayscale text-brand-dark h-16 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all shadow-xl shadow-brand-accent/20 active:scale-95"
-            >
-              <ShoppingCart className="h-6 w-6" />
-              {isStaff ? 'Allocate Stock' : 'Add to Order'}
-            </button>
+            <div className="flex gap-4">
+              {/* Quantity Selector */}
+              <div className="flex items-center bg-black/40 border border-white/10 rounded-2xl px-4">
+                <button 
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="p-2 text-slate-500 hover:text-white transition-colors"
+                >
+                  <Minus className="h-5 w-5" />
+                </button>
+                <span className="text-lg font-mono font-bold text-white w-10 text-center">{quantity}</span>
+                <button 
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="p-2 text-slate-500 hover:text-white transition-colors"
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
+              </div>
+
+              <button 
+                onClick={() => addItem(part.id, quantity)}
+                disabled={!inStock}
+                className="flex-1 bg-brand-accent hover:bg-emerald-400 disabled:opacity-20 disabled:grayscale text-brand-dark h-16 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all shadow-xl shadow-brand-accent/20 active:scale-95"
+              >
+                <ShoppingCart className="h-6 w-6" />
+                {isStaff ? 'Allocate Stock' : 'Add to Order'}
+              </button>
+            </div>
           </div>
 
           {/* Technical Grid */}
@@ -172,7 +195,7 @@ export default function PartDetail() {
         </div>
       </div>
 
-      {/* --- REVIEWS SECTION: Customer Feedback Terminal --- */}
+      {/* Reviews Section */}
       <section className="mt-20 border-t border-white/5 pt-16">
         <div className="flex items-center gap-3 mb-12">
           <MessageSquare className="h-5 w-5 text-brand-accent" />
