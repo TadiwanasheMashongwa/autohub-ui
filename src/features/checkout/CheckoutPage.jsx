@@ -4,13 +4,11 @@ import CheckoutForm from './CheckoutForm';
 import { useCart } from '../../context/CartContext';
 import { Navigate } from 'react-router-dom';
 
-// Replace with your actual Stripe Public Key
-const stripePromise = loadStripe('pk_test_your_key_here');
+const stripePromise = loadStripe('pk_test_51Stp4xD1eq0ujxUIZxERSvROdoOhbp1MZvOSSTO07q1bB7T7pcETINS2l7GGOZc0Sc6lsys7XjKqv3G8cEwvXziX00ktMWr5nh');
 
 export default function CheckoutPage() {
   const { cart, loading } = useCart();
 
-  // 1. Wait for cart to load before making decisions
   if (loading) {
     return (
       <div className="min-h-screen bg-brand-dark flex items-center justify-center">
@@ -19,21 +17,22 @@ export default function CheckoutPage() {
     );
   }
 
-  // 2. Guard: Redirect if cart is truly empty
   if (!cart || !cart.items || cart.items.length === 0) {
     return <Navigate to="/warehouse" replace />;
   }
+
+  // SILICON VALLEY GUARD: Ensure ID is a string before calling substring
+  const displayId = cart.id ? String(cart.id).substring(0, 8).toUpperCase() : "PENDING";
 
   return (
     <div className="min-h-screen bg-brand-dark p-8 flex flex-col items-center">
       <div className="max-w-xl w-full space-y-8">
         <div>
-          <h1 className="text-3xl font-black text-white uppercase tracking-tighter">
+          <h1 className="text-3xl font-black text-white uppercase tracking-tighter italic">
             Final <span className="text-brand-accent">Settlement</span>
           </h1>
-          {/* FIXED: Added optional chaining to prevent crash if ID is missing */}
           <p className="text-xs text-slate-500 font-mono mt-1 uppercase tracking-widest">
-            Transaction ID: {cart.id?.substring(0, 8).toUpperCase() || "PENDING"}
+            Transaction ID: {displayId}
           </p>
         </div>
 
@@ -42,7 +41,6 @@ export default function CheckoutPage() {
           <div className="space-y-3">
             {cart.items.map(item => (
               <div key={item.id} className="flex justify-between text-sm">
-                {/* FIXED: Corrected mapping to match your CartPage data structure */}
                 <span className="text-slate-300">
                   {item.part?.name || item.partName} 
                   <span className="text-slate-500 font-mono text-[10px] ml-2">x{item.quantity}</span>
