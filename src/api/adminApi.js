@@ -24,4 +24,10 @@ export const adminApi = {
   deleteClerk: async (id) => (await apiClient.delete(`/admin/clerks/${id}`)).data,
   getCustomers: async () => (await apiClient.get('/admin/customers')).data,
   getStats: async () => (await apiClient.get('/admin/stats')).data,
+
+  // --- PHASE 4: BRAND SENTIMENT ---
+  getReviews: async (negativeOnly = false) => 
+    (await apiClient.get(`/admin/reviews?negativeOnly=${negativeOnly}`)).data,
+  deleteReview: async (id) => 
+    (await apiClient.delete(`/admin/reviews/${id}`)).data,
 };
