@@ -5,11 +5,11 @@ import { toast } from '../../context/NotificationContext';
 import { 
   Layers, Car, Trash2, Plus, Loader2, Save, X, Edit3, Settings, Search, Users, 
   Download, Package, AlertTriangle, Link as LinkIcon, Copy, MessageSquare, 
-  Star, ShieldX, TrendingUp, Truck, RotateCcw
+  Star, ShieldX, TrendingUp, Truck, RotateCcw, ScanLine, Barcode, CheckCircle
 } from 'lucide-react';
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState('financials'); // Phase 5 Default
+  const [activeTab, setActiveTab] = useState('financials');
 
   return (
     <div className="p-8 space-y-8 bg-brand-dark min-h-screen text-white">
@@ -19,11 +19,9 @@ export default function AdminDashboard() {
           <p className="text-slate-500 font-mono text-[10px] uppercase tracking-widest mt-1">Terminal Level: Root Authority</p>
         </div>
         <nav className="flex bg-white/5 p-1 rounded-xl border border-white/10 overflow-x-auto">
-          <TabBtn active={activeTab === 'financials'} onClick={() => setActiveTab('financials')} icon={<TrendingUp size={14}/>} label="Financials" />
+          <TabBtn active={activeTab === 'financials'} onClick={() => setActiveTab('financials')} icon={<TrendingUp size={14}/>} label="Warehouse" />
           <TabBtn active={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} icon={<Package size={14}/>} label="Inventory" />
           <TabBtn active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')} icon={<MessageSquare size={14}/>} label="Reviews" />
-          <TabBtn active={activeTab === 'categories'} onClick={() => setActiveTab('categories')} icon={<Layers size={14}/>} label="Catalog" />
-          <TabBtn active={activeTab === 'vehicles'} onClick={() => setActiveTab('vehicles')} icon={<Car size={14}/>} label="Vehicles" />
           <TabBtn active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<Users size={14}/>} label="Customers" />
           <TabBtn active={activeTab === 'ops'} onClick={() => setActiveTab('ops')} icon={<Settings size={14}/>} label="Staff/Stats" />
         </nav>
@@ -40,63 +38,146 @@ export default function AdminDashboard() {
   );
 }
 
-// --- PHASE 5: FINANCIAL TERMINAL ---
+// --- PHASE 5.5: WAREHOUSE DISPATCH TERMINAL (Strict Barcode Logic) ---
 function FinancialTerminal() {
   const queryClient = useQueryClient();
   const { data: orders, isLoading } = useQuery({ queryKey: ['active-orders'], queryFn: adminApi.getActiveOrders });
-
-  const refundMutation = useMutation({
-    mutationFn: adminApi.processRefund,
-    onSuccess: () => {
-      queryClient.invalidateQueries(['active-orders']);
-      toast.show("Refund Complete. Inventory restocked.", "success");
-    }
-  });
+  const [activeManifest, setActiveManifest] = useState(null);
 
   if (isLoading) return <Loader2 className="animate-spin text-brand-accent mx-auto p-20" />;
+  
+  // If a clerk is scanning an order, show the Picking Terminal instead of the table
+  if (activeManifest) return <PickingTerminal order={activeManifest} onBack={() => setActiveManifest(null)} />;
 
   return (
     <div className="space-y-6 animate-in fade-in">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <MetricCard title="System Efficiency" value="94.2%" description="Picking Velocity" />
-        <MetricCard title="Return Volume" value="1.8%" description="30-Day Rate" />
-        <MetricCard title="Gross Delta" value="+12%" description="Revenue Trends" />
+        <MetricCard title="Active Picking" value={orders?.filter(o => o.status === 'PAID').length || 0} description="Orders Ready" />
+        <MetricCard title="Ready to Ship" value={orders?.filter(o => o.status === 'PICKED').length || 0} description="Verified Manifests" />
       </div>
 
       <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
-        <div className="p-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-          <h3 className="text-xs font-black uppercase tracking-widest">Command Logistics</h3>
-          <Truck size={16} className="text-brand-accent"/>
+        <div className="p-4 border-b border-white/5 flex justify-between bg-white/[0.01]">
+          <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Warehouse Queue</h3>
+          <Truck size={14} className="text-brand-accent opacity-50" />
         </div>
         <table className="w-full text-left text-xs">
           <thead className="bg-white/5 text-[10px] uppercase text-slate-400 font-bold">
-            <tr><th className="p-4">ID</th><th className="p-4">Status</th><th className="p-4">Courier / Tracking</th><th className="p-4">Amount</th><th className="p-4 text-right">Settlement</th></tr>
+            <tr><th className="p-4">ID</th><th className="p-4">Status</th><th className="p-4">Logistics</th><th className="p-4 text-right">Dispatch</th></tr>
           </thead>
           <tbody className="text-slate-300">
             {orders?.map(o => (
               <tr key={o.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                 <td className="p-4 font-mono font-bold">#{o.id}</td>
-                <td className="p-4"><span className="px-2 py-1 rounded bg-brand-accent/10 text-brand-accent text-[10px] font-black uppercase">{o.status}</span></td>
                 <td className="p-4">
-                  <div className="flex flex-col">
-                    <span className="font-bold text-white">{o.courierName || 'Unassigned'}</span>
-                    <span className="text-[10px] opacity-50">{o.trackingNumber || 'Awaiting tracking...'}</span>
-                  </div>
+                  <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${
+                    o.status === 'PAID' ? 'bg-teal-500/10 text-teal-500' : 
+                    o.status === 'PICKED' ? 'bg-blue-500/10 text-blue-500' : 'bg-brand-accent/10 text-brand-accent'
+                  }`}>
+                    {o.status}
+                  </span>
                 </td>
-                <td className="p-4 font-black text-white">${o.totalAmount.toFixed(2)}</td>
-                <td className="p-4 text-right space-x-2">
-                  <button onClick={() => {
-                    const c = window.prompt("Update Courier:", o.courierName);
-                    const t = window.prompt("Update Tracking #:", o.trackingNumber);
-                    if (c && t) adminApi.updateLogistics(o.id, {courier: c, tracking: t}).then(() => queryClient.invalidateQueries(['active-orders']));
-                  }} className="p-2 hover:text-brand-accent transition-colors"><Edit3 size={16}/></button>
-                  <button onClick={() => { if(window.confirm('Execute Refund?')) refundMutation.mutate(o.id); }} className="p-2 hover:text-red-500 transition-colors"><RotateCcw size={16}/></button>
+                <td className="p-4">
+                  <p className="font-bold">{o.courierName || 'Pending'}</p>
+                  <p className="text-[10px] opacity-50 font-mono">{o.trackingNumber || 'Unassigned'}</p>
+                </td>
+                <td className="p-4 text-right">
+                  {/* CLERK ACTION: START PICKING */}
+                  {o.status === 'PAID' ? (
+                    <button 
+                      onClick={() => setActiveManifest(o)}
+                      className="bg-brand-accent text-brand-dark px-4 py-2 rounded-lg font-black uppercase text-[10px] flex items-center gap-2 ml-auto hover:scale-105 transition-all shadow-lg shadow-brand-accent/10"
+                    >
+                      <ScanLine size={14}/> Verify Barcodes
+                    </button>
+                  ) : (
+                    /* ADMIN ACTIONS: LOGISTICS & REFUNDS */
+                    <div className="flex justify-end gap-2">
+                       <button onClick={() => {
+                         const c = window.prompt("Courier:", o.courierName);
+                         const t = window.prompt("Tracking:", o.trackingNumber);
+                         if(c && t) adminApi.updateLogistics(o.id, {courier:c, tracking:t}).then(() => queryClient.invalidateQueries(['active-orders']));
+                       }} className="p-2 hover:text-brand-accent transition-colors"><Edit3 size={16}/></button>
+                       <button onClick={() => { if(window.confirm('Execute Refund?')) adminApi.processRefund(o.id).then(() => queryClient.invalidateQueries(['active-orders'])); }} className="p-2 hover:text-red-500 transition-colors"><RotateCcw size={16}/></button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+// --- FOCUSED PICKING UI (STRICT PROTOCOL) ---
+function PickingTerminal({ order, onBack }) {
+  const queryClient = useQueryClient();
+  const [scans, setScans] = useState({}); // { itemId: scannedValue }
+  
+  const verifyMutation = useMutation({
+    mutationFn: (map) => adminApi.verifyPick(order.id, map),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['active-orders']);
+      toast.show("Verification Successful. Order moved to PICKED.", "success");
+      onBack();
+    },
+    onError: (err) => toast.show(err.response?.data?.message || "Barcode mismatch detected", "error")
+  });
+
+  const isItemVerified = (item) => scans[item.id] === item.part.barcode;
+  const allVerified = order.items.every(item => isItemVerified(item));
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6 animate-in zoom-in-95">
+      <div className="flex justify-between items-center bg-white/5 p-6 rounded-2xl border border-white/10">
+        <div>
+          <h2 className="text-xl font-black uppercase tracking-tighter">Manifest Verification <span className="text-brand-accent italic">#{order.id}</span></h2>
+          <p className="text-[10px] text-slate-500 font-mono mt-1 uppercase tracking-widest italic">Strict Clerk Protocol Active</p>
+        </div>
+        <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20}/></button>
+      </div>
+
+      <div className="grid gap-4">
+        {order.items.map(item => (
+          <div key={item.id} className={`p-6 rounded-2xl border transition-all ${isItemVerified(item) ? 'bg-teal-500/10 border-teal-500/30' : 'bg-white/5 border-white/10'}`}>
+            <div className="flex justify-between items-center">
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase text-brand-accent px-2 py-0.5 bg-brand-accent/10 rounded">Bin: {item.part.binLocation || 'Warehouse Floor'}</span>
+                <p className="font-black text-sm uppercase mt-2">{item.part.name}</p>
+                <p className="text-[10px] text-slate-500 font-mono">SKU: {item.part.sku} | Required: <span className="text-white">{item.quantity}</span></p>
+              </div>
+              <div className="flex items-center gap-4">
+                {isItemVerified(item) ? (
+                  <CheckCircle className="text-teal-500" size={24}/>
+                ) : (
+                  <div className="relative">
+                    <Barcode className="absolute left-3 top-3 text-slate-500" size={14}/>
+                    <input 
+                      type="text" 
+                      placeholder="Scan/Type Barcode..."
+                      className="bg-black/40 border border-white/10 p-2.5 pl-10 rounded-xl text-xs font-mono outline-none focus:border-brand-accent w-48 transition-all focus:w-64"
+                      onChange={(e) => setScans({...scans, [item.id]: e.target.value})}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <button 
+        disabled={!allVerified || verifyMutation.isLoading}
+        onClick={() => verifyMutation.mutate(scans)}
+        className={`w-full py-5 rounded-2xl font-black uppercase text-sm tracking-widest transition-all ${
+          allVerified ? 'bg-brand-accent text-brand-dark shadow-xl shadow-brand-accent/20' : 'bg-white/5 text-slate-700 cursor-not-allowed'
+        }`}
+      >
+        {verifyMutation.isLoading ? <Loader2 className="animate-spin mx-auto" /> : 'Finalize Verification'}
+      </button>
     </div>
   );
 }
@@ -279,10 +360,23 @@ function VehicleManager() {
   );
 }
 
-// --- PHASE 3.1: OPS ---
+// --- PHASE 3.1: OPS & CLERK REGISTRY ---
 function OperationsSection() {
+  const queryClient = useQueryClient();
   const { data: stats } = useQuery({ queryKey: ['admin-stats'], queryFn: adminApi.getStats });
   const { data: clerks } = useQuery({ queryKey: ['clerks'], queryFn: () => adminApi.getClerks('') });
+  
+  const [newClerk, setNewClerk] = useState({ username: '', email: '', password: '', firstName: '', lastName: '' });
+
+  const createClerkMutation = useMutation({
+    mutationFn: adminApi.createClerk,
+    onSuccess: () => {
+      queryClient.invalidateQueries(['clerks']);
+      setNewClerk({ username: '', email: '', password: '', firstName: '', lastName: '' });
+      toast.show("Clerk account initialized", "success");
+    }
+  });
+
   return (
     <div className="space-y-8 animate-in fade-in">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -291,9 +385,30 @@ function OperationsSection() {
         <MetricCard title="Low Stock" value={stats?.lowStockCount || 0} />
         <MetricCard title="Customers" value={stats?.totalCustomers || 0} />
       </div>
-      <div className="bg-white/5 border border-white/10 p-6 rounded-2xl max-w-xl space-y-2">
-        <h3 className="text-xs font-black uppercase mb-4 tracking-widest">Operator Registry</h3>
-        {clerks?.map(c => (<div key={c.id} className="flex justify-between items-center p-3 border border-white/5 rounded-lg"><div><p className="text-xs font-bold">{c.firstName} {c.lastName}</p><p className="text-[10px] text-slate-500 font-mono">{c.email}</p></div><button className="text-red-500/50 hover:text-red-500"><Trash2 size={16}/></button></div>))}
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Clerk Creation Form */}
+        <div className="bg-white/5 border border-white/10 p-6 rounded-2xl space-y-4">
+          <h3 className="text-xs font-black uppercase tracking-widest text-brand-accent">Initialize New Clerk</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <InputGroup label="First Name" val={newClerk.firstName} set={v => setNewClerk({...newClerk, firstName:v})} ph="John" />
+            <InputGroup label="Last Name" val={newClerk.lastName} set={v => setNewClerk({...newClerk, lastName:v})} ph="Doe" />
+          </div>
+          <InputGroup label="Email" val={newClerk.email} set={v => setNewClerk({...newClerk, email:v})} ph="clerk@autohub.com" />
+          <InputGroup label="Temp Password" val={newClerk.password} set={v => setNewClerk({...newClerk, password:v})} ph="********" />
+          <button 
+            onClick={() => createClerkMutation.mutate({...newClerk, username: newClerk.email})}
+            className="w-full bg-brand-accent text-brand-dark font-black py-3 rounded-xl uppercase text-xs mt-4"
+          >
+            Deploy Clerk
+          </button>
+        </div>
+
+        {/* Clerk Registry */}
+        <div className="bg-white/5 border border-white/10 p-6 rounded-2xl space-y-2">
+          <h3 className="text-xs font-black uppercase mb-4 tracking-widest">Operator Registry</h3>
+          {clerks?.map(c => (<div key={c.id} className="flex justify-between items-center p-3 border border-white/5 rounded-lg"><div><p className="text-xs font-bold">{c.firstName} {c.lastName}</p><p className="text-[10px] text-slate-500 font-mono">{c.email}</p></div><button onClick={() => { if(window.confirm('Revoke access?')) adminApi.deleteClerk(c.id).then(() => queryClient.invalidateQueries(['clerks'])); }} className="text-red-500/50 hover:text-red-500"><Trash2 size={16}/></button></div>))}
+        </div>
       </div>
     </div>
   );

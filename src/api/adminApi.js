@@ -33,4 +33,9 @@ export const adminApi = {
   getActiveOrders: async () => (await apiClient.get('/admin/orders/active')).data,
   updateLogistics: async (id, data) => (await apiClient.patch(`/admin/orders/${id}/logistics`, data)).data,
   processRefund: async (id) => (await apiClient.post(`/admin/orders/${id}/refund`)).data,
+
+  getActiveOrders: async () => (await apiClient.get('/admin/orders/active')).data,
+  verifyPick: async (id, barcodeMap) => (await apiClient.post(`/admin/orders/${id}/verify-pick`, barcodeMap)).data,
+  updateLogistics: async (id, data) => (await apiClient.patch(`/admin/orders/${id}/logistics`, data)).data,
+  processRefund: async (id) => (await apiClient.post(`/admin/orders/${id}/refund`)).data,
 };
