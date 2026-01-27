@@ -26,10 +26,10 @@ export default function Login() {
           return;
         }
 
-        // FIX: Redirect CLERK to /admin (Warehouse Terminal)
+        // REDIRECTION LOGIC
         switch (result.role) {
           case 'ADMIN':
-          case 'CLERK': // <--- MOVED HERE
+          case 'CLERK': // Clerks share the Admin Dashboard view
             navigate('/admin');
             break;
           case 'CUSTOMER':
@@ -107,15 +107,6 @@ export default function Login() {
           >
             {isSubmitting ? <Loader2 className="animate-spin h-5 w-5" /> : 'Initialize Session'}
           </button>
-
-          <div className="text-center pt-4 border-t border-white/5">
-            <p className="text-xs text-slate-500 uppercase tracking-widest font-mono">
-              New Operator? {' '}
-              <Link to="/register" className="text-brand-accent hover:underline font-bold">
-                Create Account
-              </Link>
-            </p>
-          </div>
         </form>
       </div>
     </div>

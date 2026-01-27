@@ -5,14 +5,14 @@ import { toast } from '../../context/NotificationContext';
 import { useAuth } from '../auth/AuthContext';
 import { 
   Layers, Car, Trash2, Plus, Loader2, Save, X, Edit3, Settings, Search, Users, 
-  Download, Package, AlertTriangle, Link as LinkIcon, Copy, MessageSquare, 
+  Package, AlertTriangle, Link as LinkIcon, Copy, MessageSquare, 
   Star, ShieldX, TrendingUp, Truck, RotateCcw, ScanLine, Barcode, CheckCircle
 } from 'lucide-react';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
   
-  // MATCH AUTH CONTEXT: Check for 'CLERK' (no ROLE_ prefix)
+  // CHECKLIST 3: Role Governance (Domain Isolation)
   const isClerk = user?.role === 'CLERK';
 
   const [activeTab, setActiveTab] = useState('financials');
@@ -30,7 +30,7 @@ export default function AdminDashboard() {
         </div>
         
         <nav className="flex bg-white/5 p-1 rounded-xl border border-white/10 overflow-x-auto">
-          {/* SHARED TABS */}
+          {/* SHARED TABS: Warehouse & Inventory */}
           <TabBtn active={activeTab === 'financials'} onClick={() => setActiveTab('financials')} icon={<TrendingUp size={14}/>} label="Warehouse" />
           <TabBtn active={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} icon={<Package size={14}/>} label="Inventory" />
           
@@ -60,15 +60,37 @@ export default function AdminDashboard() {
   );
 }
 
-// --- PHASE 5.5: WAREHOUSE TERMINAL (Strict Barcode Logic) ---
+// --- CHECKLIST 1 & 2: WAREHOUSE TERMINAL ---
 function FinancialTerminal({ isClerk }) {
   const queryClient = useQueryClient();
   const { data: orders, isLoading } = useQuery({ queryKey: ['active-orders'], queryFn: adminApi.getActiveOrders });
-  const [activeManifest, setActiveManifest] = useState(null);
+  const [activeManifest, setActiveManifest] = useState(null); // Mission Mode state
+
+  // Logistics State for Dispatching
+  const [shippingMode, setShippingMode] = useState(null); 
+  const [logisticsData, setLogisticsData] = useState({ courier: '', tracking: '' });
+
+  const updateLogisticsMutation = useMutation({
+    mutationFn: (id) => adminApi.updateLogistics(id, logisticsData),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['active-orders']);
+      setShippingMode(null);
+      setLogisticsData({ courier: '', tracking: '' });
+      toast.show("Order Dispatched. Notification Sent.", "success");
+    }
+  });
+
+  const processRefundMutation = useMutation({
+    mutationFn: adminApi.processRefund,
+    onSuccess: () => {
+      queryClient.invalidateQueries(['active-orders']);
+      toast.show("Refund Executed", "success");
+    }
+  });
 
   if (isLoading) return <Loader2 className="animate-spin text-brand-accent mx-auto p-20" />;
   
-  // If verifying, show Picking UI
+  // CHECKLIST 1: Mission Mode (Full Screen Picking UI)
   if (activeManifest) return <PickingTerminal order={activeManifest} onBack={() => setActiveManifest(null)} />;
 
   return (
@@ -86,7 +108,7 @@ function FinancialTerminal({ isClerk }) {
         </div>
         <table className="w-full text-left text-xs">
           <thead className="bg-white/5 text-[10px] uppercase text-slate-400 font-bold">
-            <tr><th className="p-4">ID</th><th className="p-4">Status</th><th className="p-4">Logistics</th><th className="p-4 text-right">Dispatch</th></tr>
+            <tr><th className="p-4">ID</th><th className="p-4">Status</th><th className="p-4">Logistics</th><th className="p-4 text-right">Action</th></tr>
           </thead>
           <tbody className="text-slate-300">
             {orders?.map(o => (
@@ -105,26 +127,53 @@ function FinancialTerminal({ isClerk }) {
                   <p className="text-[10px] opacity-50 font-mono">{o.trackingNumber || 'Unassigned'}</p>
                 </td>
                 <td className="p-4 text-right">
-                  {/* CLERK & ADMIN ACTION: START PICKING */}
-                  {o.status === 'PAID' ? (
+                  {/* CHECKLIST 1: Manifest Generation */}
+                  {o.status === 'PAID' && (
                     <button 
                       onClick={() => setActiveManifest(o)}
                       className="bg-brand-accent text-brand-dark px-4 py-2 rounded-lg font-black uppercase text-[10px] flex items-center gap-2 ml-auto hover:scale-105 transition-all shadow-lg shadow-brand-accent/10"
                     >
                       <ScanLine size={14}/> Verify Barcodes
                     </button>
-                  ) : (
-                    /* ADMIN ONLY ACTIONS */
-                    !isClerk && (
-                      <div className="flex justify-end gap-2">
-                         <button onClick={() => {
-                           const c = window.prompt("Courier:", o.courierName);
-                           const t = window.prompt("Tracking:", o.trackingNumber);
-                           if(c && t) adminApi.updateLogistics(o.id, {courier:c, tracking:t}).then(() => queryClient.invalidateQueries(['active-orders']));
-                         }} className="p-2 hover:text-brand-accent transition-colors"><Edit3 size={16}/></button>
-                         <button onClick={() => { if(window.confirm('Execute Refund?')) adminApi.processRefund(o.id).then(() => queryClient.invalidateQueries(['active-orders'])); }} className="p-2 hover:text-red-500 transition-colors"><RotateCcw size={16}/></button>
+                  )}
+
+                  {/* CHECKLIST 2: Logistics Handshake */}
+                  {o.status === 'PICKED' && (
+                    shippingMode === o.id ? (
+                      <div className="flex items-center justify-end gap-2 animate-in slide-in-from-right">
+                        <input 
+                          placeholder="Courier" 
+                          className="bg-black/40 border border-white/10 p-2 rounded w-24 text-[10px] focus:border-brand-accent outline-none" 
+                          value={logisticsData.courier} 
+                          onChange={e => setLogisticsData({...logisticsData, courier: e.target.value})} 
+                        />
+                        <input 
+                          placeholder="Tracking #" 
+                          className="bg-black/40 border border-white/10 p-2 rounded w-32 text-[10px] focus:border-brand-accent outline-none" 
+                          value={logisticsData.tracking} 
+                          onChange={e => setLogisticsData({...logisticsData, tracking: e.target.value})} 
+                        />
+                        <button 
+                          onClick={() => updateLogisticsMutation.mutate(o.id)} 
+                          disabled={!logisticsData.courier || !logisticsData.tracking} 
+                          className="bg-teal-500 text-black p-2 rounded hover:bg-teal-400 disabled:opacity-50"
+                        >
+                          <Save size={14}/>
+                        </button>
+                        <button onClick={() => setShippingMode(null)} className="p-2 text-slate-500"><X size={14}/></button>
                       </div>
+                    ) : (
+                      <button onClick={() => setShippingMode(o.id)} className="bg-white/10 border border-white/10 px-4 py-2 rounded-lg font-bold uppercase text-[10px] ml-auto hover:bg-white/20">
+                        Dispatch
+                      </button>
                     )
+                  )}
+
+                  {/* Admin Only Actions */}
+                  {!isClerk && o.status !== 'PAID' && o.status !== 'PICKED' && (
+                    <div className="flex justify-end gap-2">
+                       <button onClick={() => { if(window.confirm('Execute Refund?')) processRefundMutation.mutate(o.id); }} className="p-2 hover:text-red-500 transition-colors"><RotateCcw size={16}/></button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -136,10 +185,11 @@ function FinancialTerminal({ isClerk }) {
   );
 }
 
-// --- FOCUSED PICKING UI ---
+// --- CHECKLIST 1: PICKING TERMINAL (Strict Barcode Verification) ---
 function PickingTerminal({ order, onBack }) {
   const queryClient = useQueryClient();
   const [scans, setScans] = useState({}); // { itemId: scannedValue }
+  const [feedback, setFeedback] = useState({}); // { itemId: 'success' | 'error' | null }
   
   const verifyMutation = useMutation({
     mutationFn: (map) => adminApi.verifyPick(order.id, map),
@@ -150,6 +200,19 @@ function PickingTerminal({ order, onBack }) {
     },
     onError: (err) => toast.show(err.response?.data?.message || "Barcode mismatch detected", "error")
   });
+
+  const handleScan = (itemId, inputBarcode, correctBarcode) => {
+    setScans(prev => ({...prev, [itemId]: inputBarcode}));
+    
+    // CHECKLIST 1: Visual Feedback (Teal/Red)
+    if (inputBarcode === correctBarcode) {
+      setFeedback(prev => ({...prev, [itemId]: 'success'}));
+    } else if (inputBarcode.length >= correctBarcode.length) {
+      setFeedback(prev => ({...prev, [itemId]: 'error'}));
+    } else {
+      setFeedback(prev => ({...prev, [itemId]: null}));
+    }
+  };
 
   const isItemVerified = (item) => scans[item.id] === item.part.barcode;
   const allVerified = order.items.every(item => isItemVerified(item));
@@ -165,32 +228,41 @@ function PickingTerminal({ order, onBack }) {
       </div>
 
       <div className="grid gap-4">
-        {order.items.map(item => (
-          <div key={item.id} className={`p-6 rounded-2xl border transition-all ${isItemVerified(item) ? 'bg-teal-500/10 border-teal-500/30' : 'bg-white/5 border-white/10'}`}>
-            <div className="flex justify-between items-center">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase text-brand-accent px-2 py-0.5 bg-brand-accent/10 rounded">Bin: {item.part.binLocation || 'Floor'}</span>
-                <p className="font-black text-sm uppercase mt-2">{item.part.name}</p>
-                <p className="text-[10px] text-slate-500 font-mono">SKU: {item.part.sku} | Required: <span className="text-white">{item.quantity}</span></p>
-              </div>
-              <div className="flex items-center gap-4">
-                {isItemVerified(item) ? (
-                  <CheckCircle className="text-teal-500" size={24}/>
-                ) : (
-                  <div className="relative">
-                    <Barcode className="absolute left-3 top-3 text-slate-500" size={14}/>
-                    <input 
-                      type="text" 
-                      placeholder="Scan Barcode..."
-                      className="bg-black/40 border border-white/10 p-2.5 pl-10 rounded-xl text-xs font-mono outline-none focus:border-brand-accent w-48 transition-all focus:w-64"
-                      onChange={(e) => setScans({...scans, [item.id]: e.target.value})}
-                    />
-                  </div>
-                )}
+        {order.items.map(item => {
+          const status = feedback[item.id];
+          return (
+            <div key={item.id} className={`p-6 rounded-2xl border transition-all duration-300 ${
+              status === 'success' ? 'bg-teal-500/10 border-teal-500/30' : 
+              status === 'error' ? 'bg-red-500/10 border-red-500/30' : 
+              'bg-white/5 border-white/10'
+            }`}>
+              <div className="flex justify-between items-center">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase text-brand-accent px-2 py-0.5 bg-brand-accent/10 rounded">Bin: {item.part.binLocation || 'Floor'}</span>
+                  <p className="font-black text-sm uppercase mt-2">{item.part.name}</p>
+                  <p className="text-[10px] text-slate-500 font-mono">SKU: {item.part.sku} | Required: <span className="text-white">{item.quantity}</span></p>
+                </div>
+                <div className="flex items-center gap-4">
+                  {status === 'success' ? (
+                    <CheckCircle className="text-teal-500" size={24}/>
+                  ) : (
+                    <div className="relative">
+                      {status === 'error' ? <AlertTriangle className="absolute left-3 top-3 text-red-500" size={14}/> : <Barcode className="absolute left-3 top-3 text-slate-500" size={14}/>}
+                      <input 
+                        type="text" 
+                        placeholder="Scan Barcode..."
+                        className={`bg-black/40 border p-2.5 pl-10 rounded-xl text-xs font-mono outline-none w-48 transition-all focus:w-64 ${
+                          status === 'error' ? 'border-red-500 text-red-500' : 'border-white/10 focus:border-brand-accent'
+                        }`}
+                        onChange={(e) => handleScan(item.id, e.target.value, item.part.barcode)}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <button 
@@ -230,7 +302,6 @@ function InventoryManager({ isClerk }) {
     <div className="space-y-6 animate-in fade-in">
       <div className="flex justify-between items-center gap-4">
         <div className="relative w-80"><Search className="absolute left-3 top-3 h-4 w-4 text-slate-500"/><input type="text" placeholder="Search SKU/Name..." value={q} onChange={(e) => setQ(e.target.value)} className="w-full bg-slate-900 border border-white/10 p-2.5 pl-10 rounded-xl text-white text-sm outline-none focus:border-brand-accent" /></div>
-        {/* Hide New Part button for Clerks if desired, currently visible */}
         {!isAdding && !isClerk && <button onClick={() => setIsAdding(true)} className="flex items-center gap-2 px-6 py-2.5 bg-brand-accent text-brand-dark font-black text-[10px] uppercase rounded-lg"><Plus size={14}/> New Part</button>}
       </div>
 
@@ -256,7 +327,7 @@ function InventoryManager({ isClerk }) {
                 <td className="p-4 flex items-center gap-3"><span className={p.stockQuantity <= 5 ? 'text-red-500 animate-pulse' : ''}>{p.stockQuantity} units</span> {p.stockQuantity <= 5 && <AlertTriangle size={12}/>}</td>
                 <td className="p-4 text-right space-x-3">
                   <button onClick={() => setCompatPart(p)} className="text-slate-400 hover:text-brand-accent"><LinkIcon size={16}/></button>
-                  {/* Allow Clerks to adjust stock? Usually Admin only. Hidden for Clerk here. */}
+                  {/* Clerk Read-Only for Stock, Admin can Edit */}
                   {!isClerk && <button onClick={() => { const n = window.prompt("Adjust Stock:", p.stockQuantity); if(n) stockMutation.mutate({id:p.id, qty:parseInt(n)}); }} className="text-slate-400 hover:text-white"><Edit3 size={16}/></button>}
                 </td>
               </tr>

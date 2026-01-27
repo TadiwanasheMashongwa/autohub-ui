@@ -96,9 +96,8 @@ export default function App() {
             </RoleGuard>
           } />
 
-          {/* Administrative Terminal - NOW OPEN TO CLERKS */}
+          {/* Administrative Terminal - OPEN TO CLERKS FOR OPERATIONS */}
           <Route path="/admin" element={
-            // FIX 1: Allow CLERK access to the Admin Dashboard
             <RoleGuard allowedRoles={['ADMIN', 'CLERK']}>
               <AdminDashboard />
             </RoleGuard>
@@ -107,7 +106,7 @@ export default function App() {
           {/* Root Identity Logic */}
           <Route path="/" element={
             !user ? <Navigate to="/login" replace /> : 
-            // FIX 2: Redirect both ADMIN and CLERK to /admin
+            // CLERKS and ADMINS go to the Dashboard (Operations Center)
             isStaff ? <Navigate to="/admin" replace /> : <Navigate to="/warehouse" replace />
           } />
           

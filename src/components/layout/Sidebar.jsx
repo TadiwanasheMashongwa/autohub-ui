@@ -20,10 +20,14 @@ export default function Sidebar() {
   const isActive = (path) => location.pathname.startsWith(path);
 
   const navItems = [
+    // Storefront access (Optional for Clerks, but kept based on your file)
     { label: 'Warehouse', path: '/warehouse', icon: Package, roles: ['ADMIN', 'CLERK', 'CUSTOMER'] },
     { label: 'Orders', path: '/orders', icon: Truck, roles: ['ADMIN', 'CLERK', 'CUSTOMER'] },
-    // FIX: Added CLERK to allowed roles for Admin Terminal
+    
+    // MAIN CLERK WORKSPACE
     { label: 'Admin Terminal', path: '/admin', icon: ShieldCheck, roles: ['ADMIN', 'CLERK'] },
+    
+    // ADMIN ONLY
     { label: 'Audit Logs', path: '/audit', icon: History, roles: ['ADMIN'] },
   ];
 
