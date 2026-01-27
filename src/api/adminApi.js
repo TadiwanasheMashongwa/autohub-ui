@@ -1,21 +1,27 @@
 import apiClient from './apiClient';
 
 export const adminApi = {
-  // Fetches revenue, order counts, and active user stats
-  getSystemMetrics: async () => {
-    const response = await apiClient.get('/admin/metrics/summary');
+  // Matches AdminController.stats()
+  getStats: async () => {
+    const response = await apiClient.get('/admin/stats');
     return response.data;
   },
 
-  // Fetches daily revenue data for the chart
-  getRevenueStats: async () => {
-    const response = await apiClient.get('/admin/metrics/revenue');
+  // Matches AdminController.createClerk()
+  createClerk: async (clerkData) => {
+    const response = await apiClient.post('/admin/create-clerk', clerkData);
     return response.data;
   },
 
-  // Fetches stock health (Low stock items vs healthy stock)
-  getWarehouseHealth: async () => {
-    const response = await apiClient.get('/admin/metrics/warehouse-health');
+  // Matches AdminController.customers()
+  getCustomers: async () => {
+    const response = await apiClient.get('/admin/customers');
+    return response.data;
+  },
+
+  // Matches AdminController.adjustStock()
+  adjustStock: async (partId, quantity) => {
+    const response = await apiClient.patch(`/admin/inventory/${partId}/stock?quantity=${quantity}`);
     return response.data;
   }
 };
