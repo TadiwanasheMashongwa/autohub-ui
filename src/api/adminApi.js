@@ -1,7 +1,7 @@
 import apiClient from './apiClient';
 
 export const adminApi = {
-  // --- PHASE 1: CATEGORIES & VEHICLES ---
+  // --- CATALOG & VEHICLES ---
   getCategories: async (query = '') => {
     const path = query ? `/categories/search?query=${query}` : '/categories';
     const response = await apiClient.get(path);
@@ -15,7 +15,7 @@ export const adminApi = {
   createVehicle: async (vehicle) => (await apiClient.post('/vehicles', vehicle)).data,
   deleteVehicle: async (id) => (await apiClient.delete(`/vehicles/${id}`)).data,
 
-  // --- PHASE 3: STAFF GOVERNANCE ---
+  // --- STAFF & CUSTOMERS ---
   getClerks: async (query = '') => {
     const path = query ? `/admin/clerks/search?query=${query}` : '/admin/clerks';
     const response = await apiClient.get(path);
@@ -23,9 +23,6 @@ export const adminApi = {
   },
   createClerk: async (data) => (await apiClient.post('/admin/create-clerk', data)).data,
   deleteClerk: async (id) => (await apiClient.delete(`/admin/clerks/${id}`)).data,
-
-  // --- STATS & CUSTOMERS ---
-  getStats: async () => (await apiClient.get('/admin/stats')).data,
   getCustomers: async () => (await apiClient.get('/admin/customers')).data,
-  
+  getStats: async () => (await apiClient.get('/admin/stats')).data,
 };
