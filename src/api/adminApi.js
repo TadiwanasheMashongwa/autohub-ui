@@ -26,8 +26,11 @@ export const adminApi = {
   getStats: async () => (await apiClient.get('/admin/stats')).data,
 
   // --- PHASE 4: BRAND SENTIMENT ---
-  getReviews: async (negativeOnly = false) => 
-    (await apiClient.get(`/admin/reviews?negativeOnly=${negativeOnly}`)).data,
-  deleteReview: async (id) => 
-    (await apiClient.delete(`/admin/reviews/${id}`)).data,
+  getReviews: async (negativeOnly = false) => (await apiClient.get(`/admin/reviews?negativeOnly=${negativeOnly}`)).data,
+  deleteReview: async (id) => (await apiClient.delete(`/admin/reviews/${id}`)).data,
+
+  // --- PHASE 5: FINANCIALS & LOGISTICS (NEW) ---
+  getActiveOrders: async () => (await apiClient.get('/admin/orders/active')).data,
+  updateLogistics: async (id, data) => (await apiClient.patch(`/admin/orders/${id}/logistics`, data)).data,
+  processRefund: async (id) => (await apiClient.post(`/admin/orders/${id}/refund`)).data,
 };
