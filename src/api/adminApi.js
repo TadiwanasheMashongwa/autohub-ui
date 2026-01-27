@@ -1,27 +1,25 @@
 import apiClient from './apiClient';
 
 export const adminApi = {
-  // Matches AdminController.stats()
-  getStats: async () => {
-    const response = await apiClient.get('/admin/stats');
-    return response.data;
-  },
+  // --- OPERATIONS & STATS ---
+  getStats: async () => (await apiClient.get('/admin/stats')).data,
+  createClerk: async (data) => (await apiClient.post('/admin/create-clerk', data)).data,
+  getCustomers: async () => (await apiClient.get('/admin/customers')).data,
 
-  // Matches AdminController.createClerk()
-  createClerk: async (clerkData) => {
-    const response = await apiClient.post('/admin/create-clerk', clerkData);
-    return response.data;
-  },
+  // --- PHASE 1: CATEGORY ARCHITECTURE ---
+  getCategories: async () => (await apiClient.get('/v1/categories')).data,
+  createCategory: async (cat) => (await apiClient.post('/v1/categories', cat)).data,
+  deleteCategory: async (id) => (await apiClient.delete(`/v1/categories/${id}`)).data,
 
-  // Matches AdminController.customers()
-  getCustomers: async () => {
-    const response = await apiClient.get('/admin/customers');
-    return response.data;
-  },
+  // --- PHASE 1: VEHICLE MATRIX ---
+  getVehicles: async () => (await apiClient.get('/v1/vehicles')).data,
+  createVehicle: async (v) => (await apiClient.post('/v1/vehicles', v)).data,
+  deleteVehicle: async (id) => (await apiClient.delete(`/v1/vehicles/${id}`)).data,
 
-  // Matches AdminController.adjustStock()
-  adjustStock: async (partId, quantity) => {
-    const response = await apiClient.patch(`/admin/inventory/${partId}/stock?quantity=${quantity}`);
-    return response.data;
-  }
+  // --- PHASE 2: CATALOG MASTER ---
+  getInventory: async () => (await apiClient.get('/v1/parts')).data, // Pageable handled by default
+  adjustStock: async (id, qty) => (await apiClient.patch(`/admin/inventory/${id}/stock?quantity=${qty}`)).data,
+
+  // --- PHASE 4: REVIEWS & SENTIMENT ---
+  getReviewsByPart: async (partId) => (await apiClient.get(`/v1/reviews/part/${partId}`)).data
 };
