@@ -1,10 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '../../api/adminApi';
 import { useState } from 'react';
-import { Layers, Car, Trash2, Plus, Loader2, Save, X, Edit3, Settings, Search, Users, Download } from 'lucide-react';
 import { toast } from '../../context/NotificationContext';
 import { 
-  Layers, Car, Trash2, Plus, Loader2, Save, X, Edit3, Settings, Search, Users 
+  Layers, Car, Trash2, Plus, Loader2, Save, X, Edit3, Settings, Search, Users, Download 
 } from 'lucide-react';
 
 // --- MAIN WRAPPER ---
@@ -24,12 +23,14 @@ export default function AdminDashboard() {
         <nav className="flex bg-white/5 p-1 rounded-xl border border-white/10 overflow-x-auto">
           <TabBtn active={activeTab === 'categories'} onClick={() => setActiveTab('categories')} icon={<Layers size={14}/>} label="Catalog" />
           <TabBtn active={activeTab === 'vehicles'} onClick={() => setActiveTab('vehicles')} icon={<Car size={14}/>} label="Vehicles" />
-          <TabBtn active={activeTab === 'ops'} onClick={() => setActiveTab('ops')} icon={<Users size={14}/>} label="Staff/Stats" />
+          <TabBtn active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<Users size={14}/>} label="Customers" />
+          <TabBtn active={activeTab === 'ops'} onClick={() => setActiveTab('ops')} icon={<Settings size={14}/>} label="Staff/Stats" />
         </nav>
       </div>
 
       {activeTab === 'categories' && <CategoryManager />}
       {activeTab === 'vehicles' && <VehicleManager />}
+      {activeTab === 'customers' && <CustomerDirectory />}
       {activeTab === 'ops' && <OperationsSection />}
     </div>
   );
@@ -100,11 +101,11 @@ function CategoryManager() {
       {isAdding && (
         <div className="bg-white/5 border border-brand-accent/30 p-4 rounded-xl flex flex-col md:flex-row gap-4 items-end">
           <div className="flex-1 space-y-2">
-            <label className="text-[10px] text-slate-500 uppercase font-bold">Name</label>
+            <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Name</label>
             <input value={newCat.name} onChange={e => setNewCat({...newCat, name: e.target.value})} className="w-full bg-slate-900 border border-white/10 p-2 rounded text-white text-sm" />
           </div>
           <div className="flex-[2] space-y-2">
-            <label className="text-[10px] text-slate-500 uppercase font-bold">Description</label>
+            <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Description</label>
             <input value={newCat.description} onChange={e => setNewCat({...newCat, description: e.target.value})} className="w-full bg-slate-900 border border-white/10 p-2 rounded text-white text-sm" />
           </div>
           <div className="flex gap-2">
@@ -125,11 +126,11 @@ function CategoryManager() {
                 <td className="p-4 font-bold">
                   {editingId === cat.id ? (
                     <input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="bg-slate-900 border border-brand-accent/30 p-1 rounded text-white" />
-                  ) : <span>{cat.name}</span>}
+                  ) : <span className="text-white">{cat.name}</span>}
                 </td>
                 <td className="p-4">
                   {editingId === cat.id ? (
-                    <input value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} className="bg-slate-900 border border-brand-accent/30 p-1 rounded text-white w-full" />
+                    <input value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} className="w-full bg-slate-900 border border-brand-accent/30 p-1 rounded text-white w-full" />
                   ) : <span className="opacity-60">{cat.description}</span>}
                 </td>
                 <td className="p-4 text-right space-x-4">
@@ -140,7 +141,7 @@ function CategoryManager() {
                     </div>
                   ) : (
                     <div className="flex justify-end gap-4">
-                      <button onClick={() => { setEditingId(cat.id); setEditForm({ name: cat.name, description: cat.description }); }} className="text-slate-400 hover:text-brand-accent"><Edit3 size={16}/></button>
+                      <button onClick={() => { setEditingId(cat.id); setEditForm({ name: cat.name, description: cat.description }); }} className="text-slate-500 hover:text-brand-accent"><Edit3 size={16}/></button>
                       <button onClick={() => { if(window.confirm('Delete category?')) deleteMutation.mutate(cat.id); }} className="text-red-400/30 hover:text-red-400"><Trash2 size={16}/></button>
                     </div>
                   )}
@@ -239,7 +240,78 @@ function VehicleManager() {
   );
 }
 
-// --- PHASE 3: STAFF & STATS ---
+// --- PHASE 3.2: CUSTOMER DIRECTORY & EXPORT ---
+function CustomerDirectory() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const { data: customers, isLoading } = useQuery({ 
+    queryKey: ['customers'], 
+    queryFn: adminApi.getCustomers 
+  });
+
+  const filteredCustomers = customers?.filter(c => 
+    c.email.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    c.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.businessName?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const exportToCSV = () => {
+    if (!filteredCustomers || filteredCustomers.length === 0) return;
+    const headers = ["ID,First Name,Last Name,Email,Phone,Business,Address\n"];
+    const rows = filteredCustomers.map(c => 
+      `${c.id},"${c.firstName || ''}","${c.lastName || ''}","${c.email}","${c.phoneNumber || ''}","${c.businessName || ''}","${c.address || ''}"`
+    ).join("\n");
+    const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `AutoHub_Customers_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.show("Exporting Customer Database...", "success");
+  };
+
+  if (isLoading) return <Loader2 className="animate-spin text-brand-accent mx-auto" />;
+
+  return (
+    <div className="space-y-6 animate-in fade-in">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="relative w-full md:w-96">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
+          <input 
+            type="text" placeholder="Search customer directory..." value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-slate-900 border border-white/10 p-2.5 pl-10 rounded-xl text-white text-sm outline-none focus:border-brand-accent transition-all"
+          />
+        </div>
+        <button onClick={exportToCSV} className="flex items-center gap-2 px-6 py-2.5 bg-white/5 border border-white/10 text-white font-black text-[10px] uppercase rounded-lg hover:bg-white/10 transition-all">
+          <Download size={14} className="text-brand-accent"/> Export to CSV
+        </button>
+      </div>
+
+      <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden text-xs">
+        <table className="w-full text-left border-collapse">
+          <thead className="bg-white/5 text-[10px] uppercase text-slate-400 font-bold">
+            <tr><th className="p-4">Customer</th><th className="p-4">Business</th><th className="p-4">Contact</th><th className="p-4">Location</th></tr>
+          </thead>
+          <tbody className="text-slate-300">
+            {filteredCustomers?.map(c => (
+              <tr key={c.id} className="border-b border-white/5 hover:bg-white/[0.02]">
+                <td className="p-4"><p className="text-white font-bold">{c.firstName} {c.lastName}</p></td>
+                <td className="p-4"><span className="bg-brand-accent/10 text-brand-accent px-2 py-1 rounded text-[10px] uppercase font-bold">{c.businessName || 'Individual'}</span></td>
+                <td className="p-4"><p>{c.email}</p><p className="text-slate-500">{c.phoneNumber}</p></td>
+                <td className="p-4 opacity-60 truncate max-w-xs">{c.address}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// --- PHASE 3.1: STAFF & STATS ---
 function OperationsSection() {
   const queryClient = useQueryClient();
   const [clerkSearch, setClerkSearch] = useState('');
@@ -255,7 +327,7 @@ function OperationsSection() {
     mutationFn: adminApi.createClerk,
     onSuccess: () => {
       queryClient.invalidateQueries(['clerks']);
-      toast.show("Clerk account provisioned", "success");
+      toast.show("Clerk provisioned", "success");
       setClerk({ email: '', password: '', firstName: '', lastName: '' });
     }
   });
@@ -278,6 +350,19 @@ function OperationsSection() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-white/5 border border-white/10 p-6 rounded-2xl h-fit">
+          <h3 className="text-xs font-black uppercase tracking-widest mb-6">Staff Provisioning</h3>
+          <form className="space-y-4" onSubmit={e => { e.preventDefault(); clerkMutation.mutate(clerk); }}>
+            <div className="grid grid-cols-2 gap-4">
+              <input type="text" placeholder="First Name" value={clerk.firstName} onChange={e => setClerk({...clerk, firstName: e.target.value})} className="bg-slate-900 border border-white/10 p-3 rounded text-xs text-white" required />
+              <input type="text" placeholder="Last Name" value={clerk.lastName} onChange={e => setClerk({...clerk, lastName: e.target.value})} className="bg-slate-900 border border-white/10 p-3 rounded text-xs text-white" required />
+            </div>
+            <input type="email" placeholder="Work Email" value={clerk.email} onChange={e => setClerk({...clerk, email: e.target.value})} className="w-full bg-slate-900 border border-white/10 p-3 rounded text-xs text-white" required />
+            <input type="password" placeholder="Access Password" value={clerk.password} onChange={e => setClerk({...clerk, password: e.target.value})} className="w-full bg-slate-900 border border-white/10 p-3 rounded text-xs text-white" required />
+            <button className="w-full py-4 bg-brand-accent text-brand-dark font-black uppercase text-xs tracking-widest rounded-xl hover:bg-teal-400">Initialize Operator</button>
+          </form>
+        </div>
+
         <div className="bg-white/5 border border-white/10 p-6 rounded-2xl">
           <div className="flex justify-between mb-4">
             <h3 className="text-xs font-black uppercase tracking-widest">Operator Registry</h3>
@@ -298,19 +383,6 @@ function OperationsSection() {
               </div>
             ))}
           </div>
-        </div>
-
-        <div className="bg-white/5 border border-white/10 p-6 rounded-2xl h-fit">
-          <h3 className="text-xs font-black uppercase tracking-widest mb-6">Staff Provisioning</h3>
-          <form className="space-y-4" onSubmit={e => { e.preventDefault(); clerkMutation.mutate(clerk); }}>
-            <div className="grid grid-cols-2 gap-4">
-              <input type="text" placeholder="First Name" value={clerk.firstName} onChange={e => setClerk({...clerk, firstName: e.target.value})} className="bg-slate-900 border border-white/10 p-3 rounded text-xs text-white" required />
-              <input type="text" placeholder="Last Name" value={clerk.lastName} onChange={e => setClerk({...clerk, lastName: e.target.value})} className="bg-slate-900 border border-white/10 p-3 rounded text-xs text-white" required />
-            </div>
-            <input type="email" placeholder="Work Email" value={clerk.email} onChange={e => setClerk({...clerk, email: e.target.value})} className="w-full bg-slate-900 border border-white/10 p-3 rounded text-xs text-white" required />
-            <input type="password" placeholder="Access Password" value={clerk.password} onChange={e => setClerk({...clerk, password: e.target.value})} className="w-full bg-slate-900 border border-white/10 p-3 rounded text-xs text-white" required />
-            <button className="w-full py-4 bg-brand-accent text-brand-dark font-black uppercase text-xs tracking-widest rounded-xl hover:bg-teal-400">Initialize Operator</button>
-          </form>
         </div>
       </div>
     </div>
@@ -340,108 +412,6 @@ function MetricCard({ title, value }) {
     <div className="bg-white/5 border border-white/10 p-6 rounded-2xl">
       <p className="text-slate-500 text-[10px] uppercase font-bold tracking-widest">{title}</p>
       <p className="text-2xl font-black text-white mt-1">{value}</p>
-    </div>
-  );
-}
-function CustomerDirectory() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const { data: customers, isLoading } = useQuery({ 
-    queryKey: ['customers'], 
-    queryFn: adminApi.getCustomers 
-  });
-
-  const filteredCustomers = customers?.filter(c => 
-    c.email.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    c.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.businessName?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // --- CSV EXPORT ENGINE ---
-  const exportToCSV = () => {
-    if (!filteredCustomers || filteredCustomers.length === 0) return;
-
-    const headers = ["ID,First Name,Last Name,Email,Phone,Business,Address\n"];
-    const rows = filteredCustomers.map(c => 
-      `${c.id},"${c.firstName || ''}","${c.lastName || ''}","${c.email}","${c.phoneNumber || ''}","${c.businessName || ''}","${c.address || ''}"`
-    ).join("\n");
-
-    const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute("href", url);
-    link.setAttribute("download", `AutoHub_Customers_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.show("Exporting Customer Database...", "success");
-  };
-
-  if (isLoading) return <Loader2 className="animate-spin text-brand-accent mx-auto" />;
-
-  return (
-    <div className="space-y-6 animate-in fade-in">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
-          <input 
-            type="text"
-            placeholder="Search customer directory (Name, Email, Business)..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-900 border border-white/10 p-2.5 pl-10 rounded-xl text-white text-sm outline-none focus:border-brand-accent transition-all"
-          />
-        </div>
-
-        <button 
-          onClick={exportToCSV}
-          className="flex items-center gap-2 px-6 py-2.5 bg-white/5 border border-white/10 text-white font-black text-[10px] uppercase rounded-lg hover:bg-white/10 transition-all"
-        >
-          <Download size={14} className="text-brand-accent"/> Export to CSV
-        </button>
-      </div>
-
-      <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead className="bg-white/5 text-[10px] uppercase text-slate-400 font-bold">
-            <tr>
-              <th className="p-4">Customer</th>
-              <th className="p-4">Business</th>
-              <th className="p-4">Contact</th>
-              <th className="p-4">Location</th>
-            </tr>
-          </thead>
-          <tbody className="text-xs text-slate-300">
-            {filteredCustomers?.map(c => (
-              <tr key={c.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                <td className="p-4">
-                  <p className="text-white font-bold">{c.firstName} {c.lastName}</p>
-                  <p className="text-[10px] text-slate-500 font-mono italic">ID: {c.id}</p>
-                </td>
-                <td className="p-4">
-                  <span className="bg-brand-accent/10 text-brand-accent px-2 py-1 rounded text-[10px] uppercase font-bold">
-                    {c.businessName || 'Private Individual'}
-                  </span>
-                </td>
-                <td className="p-4">
-                  <p>{c.email}</p>
-                  <p className="text-slate-500">{c.phoneNumber || 'No Phone'}</p>
-                </td>
-                <td className="p-4 max-w-xs truncate opacity-60">
-                  {c.address || 'No Address Logged'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {filteredCustomers?.length === 0 && (
-          <div className="p-20 text-center text-slate-500 font-mono text-[10px] uppercase tracking-widest">
-            Customer Directory is currently empty or no matches found.
-          </div>
-        )}
-      </div>
     </div>
   );
 }
