@@ -3,11 +3,12 @@ import { adminApi } from '../../api/adminApi';
 import { useState } from 'react';
 import { toast } from '../../context/NotificationContext';
 import { 
-  Layers, Car, Trash2, Plus, Loader2, Save, X, Edit3, Settings 
+  Layers, Car, Trash2, Plus, Loader2, Save, X, Edit3, Settings, Search 
 } from 'lucide-react';
 
+// SILICON VALLEY GRADE: Default Export Wrapper for App.jsx
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState('categories'); // Checklist Phase 1 Priority
+  const [activeTab, setActiveTab] = useState('categories');
 
   return (
     <div className="p-8 space-y-8 bg-brand-dark min-h-screen">
@@ -55,8 +56,7 @@ function CategoryManager() {
       setIsAdding(false);
       setNewCat({ name: '', description: '' });
       toast.show("Category created successfully", "success");
-    },
-    onError: (err) => toast.show(err.response?.data?.message || "Creation error", "error")
+    }
   });
 
   const updateMutation = useMutation({
@@ -150,19 +150,23 @@ function CategoryManager() {
   );
 }
 
-/* ---------------- PHASE 1.2: VEHICLE MATRIX (Read/Delete) ---------------- */
-/* ---------------- PHASE 1.2: VEHICLE COMPATIBILITY (CRUD) ---------------- */
+/* ---------------- PHASE 1.2: VEHICLE COMPATIBILITY (SEARCH & CRUD) ---------------- */
 function VehicleManager() {
   const queryClient = useQueryClient();
   const [isAdding, setIsAdding] = useState(false);
-  const [newVehicle, setNewVehicle] = useState({ 
-    make: '', model: '', yearRange: '', engineCode: '' 
-  });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [newVehicle, setNewVehicle] = useState({ make: '', model: '', yearRange: '', engineCode: '' });
 
   const { data: vehicles, isLoading } = useQuery({ 
     queryKey: ['vehicles'], 
     queryFn: adminApi.getVehicles 
   });
+
+  const filteredVehicles = vehicles?.filter(v => 
+    v.make.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    v.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    v.engineCode?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const createMutation = useMutation({
     mutationFn: adminApi.createVehicle,
@@ -170,9 +174,8 @@ function VehicleManager() {
       queryClient.invalidateQueries(['vehicles']);
       setIsAdding(false);
       setNewVehicle({ make: '', model: '', yearRange: '', engineCode: '' });
-      toast.show("Vehicle profile registered to matrix", "success");
-    },
-    onError: (err) => toast.show("Matrix expansion failed: " + (err.response?.data?.message || "Check fields"), "error")
+      toast.show("Vehicle profile registered", "success");
+    }
   });
 
   const deleteMutation = useMutation({
@@ -187,13 +190,20 @@ function VehicleManager() {
 
   return (
     <div className="space-y-6 animate-in fade-in">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-white font-bold uppercase text-xs tracking-widest">Compatibility Matrix</h3>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
+          <input 
+            type="text"
+            placeholder="Search Matrix (Make, Model...)"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-slate-900 border border-white/10 p-2.5 pl-10 rounded-xl text-white text-sm outline-none focus:border-brand-accent transition-all"
+          />
+        </div>
+
         {!isAdding && (
-          <button 
-            onClick={() => setIsAdding(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-brand-accent text-brand-dark font-black text-[10px] uppercase rounded-lg hover:bg-teal-400 transition-all"
-          >
+          <button onClick={() => setIsAdding(true)} className="flex items-center gap-2 px-4 py-2.5 bg-brand-accent text-brand-dark font-black text-[10px] uppercase rounded-lg">
             <Plus size={14}/> Matrix Expansion
           </button>
         )}
@@ -202,41 +212,26 @@ function VehicleManager() {
       {isAdding && (
         <div className="bg-white/5 border border-brand-accent/30 p-6 rounded-2xl animate-in slide-in-from-top-2">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <InputGroup label="Manufacturer (Make)" val={newVehicle.make} set={v => setNewVehicle({...newVehicle, make: v})} ph="e.g. Toyota" />
-            <InputGroup label="Vehicle Model" val={newVehicle.model} set={v => setNewVehicle({...newVehicle, model: v})} ph="e.g. Hilux" />
-            <InputGroup label="Year Range" val={newVehicle.yearRange} set={v => setNewVehicle({...newVehicle, yearRange: v})} ph="e.g. 2015-2022" />
-            <InputGroup label="Engine Code" val={newVehicle.engineCode} set={v => setNewVehicle({...newVehicle, engineCode: v})} ph="e.g. 1KD-FTV" />
+            <InputGroup label="Manufacturer" val={newVehicle.make} set={v => setNewVehicle({...newVehicle, make: v})} ph="Toyota" />
+            <InputGroup label="Model" val={newVehicle.model} set={v => setNewVehicle({...newVehicle, model: v})} ph="Hilux" />
+            <InputGroup label="Year Range" val={newVehicle.yearRange} set={v => setNewVehicle({...newVehicle, yearRange: v})} ph="2015-2022" />
+            <InputGroup label="Engine" val={newVehicle.engineCode} set={v => setNewVehicle({...newVehicle, engineCode: v})} ph="1KD-FTV" />
           </div>
           <div className="flex justify-end gap-4 mt-6">
-            <button onClick={() => setIsAdding(false)} className="text-slate-500 uppercase text-[10px] font-black tracking-widest hover:text-white transition-colors">Abort</button>
-            <button 
-              onClick={() => createMutation.mutate(newVehicle)}
-              className="bg-brand-accent text-brand-dark px-8 py-2 rounded-lg font-black uppercase text-[10px] tracking-tighter hover:bg-teal-400"
-            >
-              Commit to Matrix
-            </button>
+            <button onClick={() => setIsAdding(false)} className="text-slate-500 uppercase text-[10px] font-black tracking-widest">Abort</button>
+            <button onClick={() => createMutation.mutate(newVehicle)} className="bg-brand-accent text-brand-dark px-8 py-2 rounded-lg font-black uppercase text-[10px]">Commit</button>
           </div>
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {vehicles?.map(v => (
-          <div key={v.id} className="bg-white/5 border border-white/10 p-5 rounded-2xl flex justify-between items-center group hover:border-white/20 transition-all">
+        {filteredVehicles?.map(v => (
+          <div key={v.id} className="bg-white/5 border border-white/10 p-5 rounded-2xl flex justify-between items-center group">
             <div>
               <p className="text-white font-black uppercase tracking-tight text-sm">{v.make} <span className="text-brand-accent italic">{v.model}</span></p>
-              <div className="flex gap-2 mt-1">
-                <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-slate-400 font-mono uppercase">{v.yearRange}</span>
-                <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-slate-400 font-mono uppercase">{v.engineCode}</span>
-              </div>
+              <p className="text-[10px] text-slate-500 font-mono uppercase mt-1">{v.yearRange} • {v.engineCode}</p>
             </div>
-            <button 
-              onClick={() => {
-                if(window.confirm(`Purge ${v.make} ${v.model} from matrix?`)) deleteMutation.mutate(v.id)
-              }}
-              className="text-slate-700 group-hover:text-red-500 transition-colors p-2"
-            >
-              <Trash2 size={18}/>
-            </button>
+            <button onClick={() => deleteMutation.mutate(v.id)} className="text-slate-700 group-hover:text-red-500 transition-colors p-2"><Trash2 size={18}/></button>
           </div>
         ))}
       </div>
@@ -244,22 +239,7 @@ function VehicleManager() {
   );
 }
 
-// Helper for the Vehicle Form
-function InputGroup({ label, val, set, ph }) {
-  return (
-    <div className="space-y-2">
-      <label className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{label}</label>
-      <input 
-        value={val} 
-        onChange={e => set(e.target.value)}
-        className="w-full bg-slate-900 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-brand-accent transition-colors"
-        placeholder={ph}
-      />
-    </div>
-  );
-}
-
-/* ---------------- PHASE 3: OPS & STAFF ---------------- */
+/* ---------------- PHASE 3/5: OPS & STAFF ---------------- */
 function OperationsSection() {
   const { data: stats } = useQuery({ queryKey: ['admin-stats'], queryFn: adminApi.getStats });
   return (
@@ -272,11 +252,21 @@ function OperationsSection() {
   );
 }
 
+/* ---------------- SHARED COMPONENTS ---------------- */
 function TabBtn({ active, onClick, icon, label }) {
   return (
     <button onClick={onClick} className={`flex items-center gap-2 px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${active ? 'bg-brand-accent text-brand-dark' : 'text-slate-400 hover:text-white'}`}>
       {icon} {label}
     </button>
+  );
+}
+
+function InputGroup({ label, val, set, ph }) {
+  return (
+    <div className="space-y-2">
+      <label className="text-[10px] text-slate-500 uppercase font-black">{label}</label>
+      <input value={val} onChange={e => set(e.target.value)} className="w-full bg-slate-900 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-brand-accent" placeholder={ph} />
+    </div>
   );
 }
 
