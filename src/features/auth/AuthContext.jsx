@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
+// FIX: Go up two levels (features -> src) to find 'api'
 import { authApi } from '../../api/authApi.js'; 
+// FIX: Go up two levels (features -> src) to find 'context'
 import { toast } from '../../context/NotificationContext';
 
 const AuthContext = createContext(null);
@@ -11,7 +13,6 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const init = async () => {
-      // Prevent double-execution in React Strict Mode
       if (initialized.current) return;
       initialized.current = true;
 
@@ -23,23 +24,15 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        console.log("AUTH_LOG: Recovering session...");
-        
-        // This call will be automatically intercepted and retried by apiClient.js
-        // if the token is expired. We only catch if the refresh also fails.
         const data = await authApi.getProfile();
-        
         const identifier = data.username || data.email;
+        // Strip ROLE_ prefix so we just have 'CLERK' or 'ADMIN'
         const cleanRole = (data.role || 'CUSTOMER').replace('ROLE_', '');
 
         if (identifier) {
           setUser({ email: identifier, role: cleanRole });
-          console.log("AUTH_LOG: Identity verified.");
         }
       } catch (error) {
-        console.error("AUTH_LOG: Session recovery failed permanently.");
-        
-        // Only clear if the server explicitly rejected the final attempt
         if (error.response?.status === 401 || error.response?.status === 403) {
           localStorage.clear();
           setUser(null);

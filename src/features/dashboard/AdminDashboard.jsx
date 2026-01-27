@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '../../api/adminApi';
 import { useState } from 'react';
 import { toast } from '../../context/NotificationContext';
+import { useAuth } from '../auth/AuthContext';
 import { 
   Layers, Car, Trash2, Plus, Loader2, Save, X, Edit3, Settings, Search, Users, 
   Download, Package, AlertTriangle, Link as LinkIcon, Copy, MessageSquare, 
@@ -9,52 +10,73 @@ import {
 } from 'lucide-react';
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
+  
+  // MATCH AUTH CONTEXT: Check for 'CLERK' (no ROLE_ prefix)
+  const isClerk = user?.role === 'CLERK';
+
   const [activeTab, setActiveTab] = useState('financials');
 
   return (
     <div className="p-8 space-y-8 bg-brand-dark min-h-screen text-white">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/5 pb-8">
         <div>
-          <h1 className="text-3xl font-black uppercase tracking-tighter">System <span className="text-brand-accent italic">Architect</span></h1>
-          <p className="text-slate-500 font-mono text-[10px] uppercase tracking-widest mt-1">Terminal Level: Root Authority</p>
+          <h1 className="text-3xl font-black uppercase tracking-tighter">
+            System <span className="text-brand-accent italic">{isClerk ? 'Logistics' : 'Architect'}</span>
+          </h1>
+          <p className="text-slate-500 font-mono text-[10px] uppercase tracking-widest mt-1">
+            Terminal Level: {isClerk ? 'Warehouse Operator' : 'Root Authority'}
+          </p>
         </div>
+        
         <nav className="flex bg-white/5 p-1 rounded-xl border border-white/10 overflow-x-auto">
+          {/* SHARED TABS */}
           <TabBtn active={activeTab === 'financials'} onClick={() => setActiveTab('financials')} icon={<TrendingUp size={14}/>} label="Warehouse" />
           <TabBtn active={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} icon={<Package size={14}/>} label="Inventory" />
-          <TabBtn active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')} icon={<MessageSquare size={14}/>} label="Reviews" />
-          <TabBtn active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<Users size={14}/>} label="Customers" />
-          <TabBtn active={activeTab === 'ops'} onClick={() => setActiveTab('ops')} icon={<Settings size={14}/>} label="Staff/Stats" />
+          
+          {/* ADMIN ONLY TABS - HIDDEN FROM CLERKS */}
+          {!isClerk && (
+            <>
+              <TabBtn active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')} icon={<MessageSquare size={14}/>} label="Reviews" />
+              <TabBtn active={activeTab === 'categories'} onClick={() => setActiveTab('categories')} icon={<Layers size={14}/>} label="Catalog" />
+              <TabBtn active={activeTab === 'vehicles'} onClick={() => setActiveTab('vehicles')} icon={<Car size={14}/>} label="Vehicles" />
+              <TabBtn active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<Users size={14}/>} label="Customers" />
+              <TabBtn active={activeTab === 'ops'} onClick={() => setActiveTab('ops')} icon={<Settings size={14}/>} label="Staff/Stats" />
+            </>
+          )}
         </nav>
       </div>
 
-      {activeTab === 'financials' && <FinancialTerminal />}
-      {activeTab === 'inventory' && <InventoryManager />}
-      {activeTab === 'reviews' && <ReviewModerator />}
-      {activeTab === 'categories' && <CategoryManager />}
-      {activeTab === 'vehicles' && <VehicleManager />}
-      {activeTab === 'customers' && <CustomerDirectory />}
-      {activeTab === 'ops' && <OperationsSection />}
+      {activeTab === 'financials' && <FinancialTerminal isClerk={isClerk} />}
+      {activeTab === 'inventory' && <InventoryManager isClerk={isClerk} />}
+      
+      {/* RESTRICTED COMPONENTS */}
+      {!isClerk && activeTab === 'reviews' && <ReviewModerator />}
+      {!isClerk && activeTab === 'categories' && <CategoryManager />}
+      {!isClerk && activeTab === 'vehicles' && <VehicleManager />}
+      {!isClerk && activeTab === 'customers' && <CustomerDirectory />}
+      {!isClerk && activeTab === 'ops' && <OperationsSection />}
     </div>
   );
 }
 
-// --- PHASE 5.5: WAREHOUSE DISPATCH TERMINAL (Strict Barcode Logic) ---
-function FinancialTerminal() {
+// --- PHASE 5.5: WAREHOUSE TERMINAL (Strict Barcode Logic) ---
+function FinancialTerminal({ isClerk }) {
   const queryClient = useQueryClient();
   const { data: orders, isLoading } = useQuery({ queryKey: ['active-orders'], queryFn: adminApi.getActiveOrders });
   const [activeManifest, setActiveManifest] = useState(null);
 
   if (isLoading) return <Loader2 className="animate-spin text-brand-accent mx-auto p-20" />;
   
-  // If a clerk is scanning an order, show the Picking Terminal instead of the table
+  // If verifying, show Picking UI
   if (activeManifest) return <PickingTerminal order={activeManifest} onBack={() => setActiveManifest(null)} />;
 
   return (
     <div className="space-y-6 animate-in fade-in">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <MetricCard title="System Efficiency" value="94.2%" description="Picking Velocity" />
         <MetricCard title="Active Picking" value={orders?.filter(o => o.status === 'PAID').length || 0} description="Orders Ready" />
         <MetricCard title="Ready to Ship" value={orders?.filter(o => o.status === 'PICKED').length || 0} description="Verified Manifests" />
+        {!isClerk && <MetricCard title="System Efficiency" value="94.2%" description="Picking Velocity" />}
       </div>
 
       <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
@@ -83,7 +105,7 @@ function FinancialTerminal() {
                   <p className="text-[10px] opacity-50 font-mono">{o.trackingNumber || 'Unassigned'}</p>
                 </td>
                 <td className="p-4 text-right">
-                  {/* CLERK ACTION: START PICKING */}
+                  {/* CLERK & ADMIN ACTION: START PICKING */}
                   {o.status === 'PAID' ? (
                     <button 
                       onClick={() => setActiveManifest(o)}
@@ -92,15 +114,17 @@ function FinancialTerminal() {
                       <ScanLine size={14}/> Verify Barcodes
                     </button>
                   ) : (
-                    /* ADMIN ACTIONS: LOGISTICS & REFUNDS */
-                    <div className="flex justify-end gap-2">
-                       <button onClick={() => {
-                         const c = window.prompt("Courier:", o.courierName);
-                         const t = window.prompt("Tracking:", o.trackingNumber);
-                         if(c && t) adminApi.updateLogistics(o.id, {courier:c, tracking:t}).then(() => queryClient.invalidateQueries(['active-orders']));
-                       }} className="p-2 hover:text-brand-accent transition-colors"><Edit3 size={16}/></button>
-                       <button onClick={() => { if(window.confirm('Execute Refund?')) adminApi.processRefund(o.id).then(() => queryClient.invalidateQueries(['active-orders'])); }} className="p-2 hover:text-red-500 transition-colors"><RotateCcw size={16}/></button>
-                    </div>
+                    /* ADMIN ONLY ACTIONS */
+                    !isClerk && (
+                      <div className="flex justify-end gap-2">
+                         <button onClick={() => {
+                           const c = window.prompt("Courier:", o.courierName);
+                           const t = window.prompt("Tracking:", o.trackingNumber);
+                           if(c && t) adminApi.updateLogistics(o.id, {courier:c, tracking:t}).then(() => queryClient.invalidateQueries(['active-orders']));
+                         }} className="p-2 hover:text-brand-accent transition-colors"><Edit3 size={16}/></button>
+                         <button onClick={() => { if(window.confirm('Execute Refund?')) adminApi.processRefund(o.id).then(() => queryClient.invalidateQueries(['active-orders'])); }} className="p-2 hover:text-red-500 transition-colors"><RotateCcw size={16}/></button>
+                      </div>
+                    )
                   )}
                 </td>
               </tr>
@@ -112,7 +136,7 @@ function FinancialTerminal() {
   );
 }
 
-// --- FOCUSED PICKING UI (STRICT PROTOCOL) ---
+// --- FOCUSED PICKING UI ---
 function PickingTerminal({ order, onBack }) {
   const queryClient = useQueryClient();
   const [scans, setScans] = useState({}); // { itemId: scannedValue }
@@ -121,7 +145,7 @@ function PickingTerminal({ order, onBack }) {
     mutationFn: (map) => adminApi.verifyPick(order.id, map),
     onSuccess: () => {
       queryClient.invalidateQueries(['active-orders']);
-      toast.show("Verification Successful. Order moved to PICKED.", "success");
+      toast.show("Inventory Verified. Status: PICKED", "success");
       onBack();
     },
     onError: (err) => toast.show(err.response?.data?.message || "Barcode mismatch detected", "error")
@@ -145,7 +169,7 @@ function PickingTerminal({ order, onBack }) {
           <div key={item.id} className={`p-6 rounded-2xl border transition-all ${isItemVerified(item) ? 'bg-teal-500/10 border-teal-500/30' : 'bg-white/5 border-white/10'}`}>
             <div className="flex justify-between items-center">
               <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase text-brand-accent px-2 py-0.5 bg-brand-accent/10 rounded">Bin: {item.part.binLocation || 'Warehouse Floor'}</span>
+                <span className="text-[10px] font-black uppercase text-brand-accent px-2 py-0.5 bg-brand-accent/10 rounded">Bin: {item.part.binLocation || 'Floor'}</span>
                 <p className="font-black text-sm uppercase mt-2">{item.part.name}</p>
                 <p className="text-[10px] text-slate-500 font-mono">SKU: {item.part.sku} | Required: <span className="text-white">{item.quantity}</span></p>
               </div>
@@ -157,7 +181,7 @@ function PickingTerminal({ order, onBack }) {
                     <Barcode className="absolute left-3 top-3 text-slate-500" size={14}/>
                     <input 
                       type="text" 
-                      placeholder="Scan/Type Barcode..."
+                      placeholder="Scan Barcode..."
                       className="bg-black/40 border border-white/10 p-2.5 pl-10 rounded-xl text-xs font-mono outline-none focus:border-brand-accent w-48 transition-all focus:w-64"
                       onChange={(e) => setScans({...scans, [item.id]: e.target.value})}
                     />
@@ -178,6 +202,88 @@ function PickingTerminal({ order, onBack }) {
       >
         {verifyMutation.isLoading ? <Loader2 className="animate-spin mx-auto" /> : 'Finalize Verification'}
       </button>
+    </div>
+  );
+}
+
+// --- PHASE 2: INVENTORY ---
+function InventoryManager({ isClerk }) {
+  const queryClient = useQueryClient();
+  const [q, setQ] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+  const [compatPart, setCompatPart] = useState(null);
+  const [newPart, setNewPart] = useState({ name: '', sku: '', barcode: '', price: 0, stockQuantity: 0, brand: '', condition: 'NEW' });
+
+  const { data: partsData } = useQuery({ queryKey: ['parts', q], queryFn: () => adminApi.getParts(q) });
+
+  const createMutation = useMutation({
+    mutationFn: adminApi.createPart,
+    onSuccess: () => { queryClient.invalidateQueries(['parts']); setIsAdding(false); toast.show("Part saved", "success"); }
+  });
+
+  const stockMutation = useMutation({
+    mutationFn: ({ id, qty }) => adminApi.adjustStock(id, qty),
+    onSuccess: () => { queryClient.invalidateQueries(['parts']); toast.show("Stock updated", "success"); }
+  });
+
+  return (
+    <div className="space-y-6 animate-in fade-in">
+      <div className="flex justify-between items-center gap-4">
+        <div className="relative w-80"><Search className="absolute left-3 top-3 h-4 w-4 text-slate-500"/><input type="text" placeholder="Search SKU/Name..." value={q} onChange={(e) => setQ(e.target.value)} className="w-full bg-slate-900 border border-white/10 p-2.5 pl-10 rounded-xl text-white text-sm outline-none focus:border-brand-accent" /></div>
+        {/* Hide New Part button for Clerks if desired, currently visible */}
+        {!isAdding && !isClerk && <button onClick={() => setIsAdding(true)} className="flex items-center gap-2 px-6 py-2.5 bg-brand-accent text-brand-dark font-black text-[10px] uppercase rounded-lg"><Plus size={14}/> New Part</button>}
+      </div>
+
+      {isAdding && (
+        <div className="bg-white/5 border border-brand-accent/30 p-6 rounded-2xl grid grid-cols-1 md:grid-cols-4 gap-4 animate-in slide-in-from-top-2">
+          <InputGroup label="Name" val={newPart.name} set={v => setNewPart({...newPart, name:v})} ph="Oil Filter" />
+          <InputGroup label="SKU" val={newPart.sku} set={v => setNewPart({...newPart, sku:v})} ph="OF-101" />
+          <InputGroup label="Price" val={newPart.price} set={v => setNewPart({...newPart, price:v})} ph="15.00" />
+          <div className="flex gap-2 items-end"><button onClick={() => setIsAdding(false)} className="p-3 text-slate-500"><X/></button><button onClick={() => createMutation.mutate(newPart)} className="bg-brand-accent text-brand-dark p-3 rounded-lg w-full"><Save size={20}/></button></div>
+        </div>
+      )}
+
+      <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-white/5 text-[10px] uppercase text-slate-400 font-bold">
+            <tr><th className="p-4">Detail</th><th className="p-4">SKU/Brand</th><th className="p-4">Inventory</th><th className="p-4 text-right">Action</th></tr>
+          </thead>
+          <tbody className="text-xs">
+            {partsData?.content?.map(p => (
+              <tr key={p.id} className="border-b border-white/5 hover:bg-white/[0.02]">
+                <td className="p-4"><p className="font-bold">{p.name}</p><p className="text-[10px] text-brand-accent uppercase">{p.condition}</p></td>
+                <td className="p-4 text-slate-400 font-mono">{p.sku} | {p.brand}</td>
+                <td className="p-4 flex items-center gap-3"><span className={p.stockQuantity <= 5 ? 'text-red-500 animate-pulse' : ''}>{p.stockQuantity} units</span> {p.stockQuantity <= 5 && <AlertTriangle size={12}/>}</td>
+                <td className="p-4 text-right space-x-3">
+                  <button onClick={() => setCompatPart(p)} className="text-slate-400 hover:text-brand-accent"><LinkIcon size={16}/></button>
+                  {/* Allow Clerks to adjust stock? Usually Admin only. Hidden for Clerk here. */}
+                  {!isClerk && <button onClick={() => { const n = window.prompt("Adjust Stock:", p.stockQuantity); if(n) stockMutation.mutate({id:p.id, qty:parseInt(n)}); }} className="text-slate-400 hover:text-white"><Edit3 size={16}/></button>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {compatPart && <CompatibilityModal part={compatPart} onClose={() => setCompatPart(null)} onUpdate={() => queryClient.invalidateQueries(['parts'])} />}
+    </div>
+  );
+}
+
+function CompatibilityModal({ part, onClose, onUpdate }) {
+  const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: adminApi.getVehicles });
+  const [vQuery, setVQuery] = useState('');
+  const mapMutation = useMutation({ mutationFn: (vId) => adminApi.addCompatibility(part.id, vId), onSuccess: () => { onUpdate(); toast.show("Compatibility linked", "success"); }});
+  const filteredV = vehicles?.filter(v => v.make?.toLowerCase().includes(vQuery.toLowerCase()) || v.model?.toLowerCase().includes(vQuery.toLowerCase()));
+
+  return (
+    <div className="fixed inset-0 bg-brand-dark/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-2xl p-8 space-y-6">
+        <div className="flex justify-between items-center"><h2 className="text-xl font-black uppercase tracking-tighter">Linking: <span className="text-brand-accent italic">{part.name}</span></h2><button onClick={onClose}><X/></button></div>
+        <input type="text" placeholder="Find vehicle..." value={vQuery} onChange={e => setVQuery(e.target.value)} className="w-full bg-white/5 border border-white/5 p-4 rounded-xl text-white outline-none focus:border-brand-accent" />
+        <div className="max-h-64 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-3">
+          {filteredV?.map(v => (<button key={v.id} onClick={() => mapMutation.mutate(v.id)} className="p-4 bg-white/5 rounded-xl text-left hover:bg-brand-accent hover:text-brand-dark transition-all group"><p className="font-bold text-xs uppercase">{v.make} {v.model}</p><p className="text-[10px] opacity-60 group-hover:opacity-100">{v.yearRange}</p></button>))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -224,86 +330,6 @@ function ReviewModerator() {
   );
 }
 
-// --- PHASE 2: INVENTORY ---
-function InventoryManager() {
-  const queryClient = useQueryClient();
-  const [q, setQ] = useState('');
-  const [isAdding, setIsAdding] = useState(false);
-  const [compatPart, setCompatPart] = useState(null);
-  const [newPart, setNewPart] = useState({ name: '', sku: '', barcode: '', price: 0, stockQuantity: 0, brand: '', condition: 'NEW' });
-
-  const { data: partsData } = useQuery({ queryKey: ['parts', q], queryFn: () => adminApi.getParts(q) });
-
-  const createMutation = useMutation({
-    mutationFn: adminApi.createPart,
-    onSuccess: () => { queryClient.invalidateQueries(['parts']); setIsAdding(false); toast.show("Part saved", "success"); }
-  });
-
-  const stockMutation = useMutation({
-    mutationFn: ({ id, qty }) => adminApi.adjustStock(id, qty),
-    onSuccess: () => { queryClient.invalidateQueries(['parts']); toast.show("Stock updated", "success"); }
-  });
-
-  return (
-    <div className="space-y-6 animate-in fade-in">
-      <div className="flex justify-between items-center gap-4">
-        <div className="relative w-80"><Search className="absolute left-3 top-3 h-4 w-4 text-slate-500"/><input type="text" placeholder="Search SKU/Name..." value={q} onChange={(e) => setQ(e.target.value)} className="w-full bg-slate-900 border border-white/10 p-2.5 pl-10 rounded-xl text-white text-sm outline-none focus:border-brand-accent" /></div>
-        {!isAdding && <button onClick={() => setIsAdding(true)} className="flex items-center gap-2 px-6 py-2.5 bg-brand-accent text-brand-dark font-black text-[10px] uppercase rounded-lg"><Plus size={14}/> New Part</button>}
-      </div>
-
-      {isAdding && (
-        <div className="bg-white/5 border border-brand-accent/30 p-6 rounded-2xl grid grid-cols-1 md:grid-cols-4 gap-4 animate-in slide-in-from-top-2">
-          <InputGroup label="Name" val={newPart.name} set={v => setNewPart({...newPart, name:v})} ph="Oil Filter" />
-          <InputGroup label="SKU" val={newPart.sku} set={v => setNewPart({...newPart, sku:v})} ph="OF-101" />
-          <InputGroup label="Price" val={newPart.price} set={v => setNewPart({...newPart, price:v})} ph="15.00" />
-          <div className="flex gap-2 items-end"><button onClick={() => setIsAdding(false)} className="p-3 text-slate-500"><X/></button><button onClick={() => createMutation.mutate(newPart)} className="bg-brand-accent text-brand-dark p-3 rounded-lg w-full"><Save size={20}/></button></div>
-        </div>
-      )}
-
-      <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-white/5 text-[10px] uppercase text-slate-400 font-bold">
-            <tr><th className="p-4">Detail</th><th className="p-4">SKU/Brand</th><th className="p-4">Inventory</th><th className="p-4 text-right">Gatekeeper</th></tr>
-          </thead>
-          <tbody className="text-xs">
-            {partsData?.content?.map(p => (
-              <tr key={p.id} className="border-b border-white/5 hover:bg-white/[0.02]">
-                <td className="p-4"><p className="font-bold">{p.name}</p><p className="text-[10px] text-brand-accent uppercase">{p.condition}</p></td>
-                <td className="p-4 text-slate-400 font-mono">{p.sku} | {p.brand}</td>
-                <td className="p-4 flex items-center gap-3"><span className={p.stockQuantity <= 5 ? 'text-red-500 animate-pulse' : ''}>{p.stockQuantity} units</span> {p.stockQuantity <= 5 && <AlertTriangle size={12}/>}</td>
-                <td className="p-4 text-right space-x-3">
-                  <button onClick={() => setCompatPart(p)} className="text-slate-400 hover:text-brand-accent"><LinkIcon size={16}/></button>
-                  <button onClick={() => { const n = window.prompt("Adjust Stock:", p.stockQuantity); if(n) stockMutation.mutate({id:p.id, qty:parseInt(n)}); }} className="text-slate-400 hover:text-white"><Edit3 size={16}/></button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {compatPart && <CompatibilityModal part={compatPart} onClose={() => setCompatPart(null)} onUpdate={() => queryClient.invalidateQueries(['parts'])} />}
-    </div>
-  );
-}
-
-function CompatibilityModal({ part, onClose, onUpdate }) {
-  const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: adminApi.getVehicles });
-  const [vQuery, setVQuery] = useState('');
-  const mapMutation = useMutation({ mutationFn: (vId) => adminApi.addCompatibility(part.id, vId), onSuccess: () => { onUpdate(); toast.show("Compatibility linked", "success"); }});
-  const filteredV = vehicles?.filter(v => v.make?.toLowerCase().includes(vQuery.toLowerCase()) || v.model?.toLowerCase().includes(vQuery.toLowerCase()));
-
-  return (
-    <div className="fixed inset-0 bg-brand-dark/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-2xl p-8 space-y-6">
-        <div className="flex justify-between items-center"><h2 className="text-xl font-black uppercase tracking-tighter">Linking: <span className="text-brand-accent italic">{part.name}</span></h2><button onClick={onClose}><X/></button></div>
-        <input type="text" placeholder="Find vehicle..." value={vQuery} onChange={e => setVQuery(e.target.value)} className="w-full bg-white/5 border border-white/5 p-4 rounded-xl text-white outline-none focus:border-brand-accent" />
-        <div className="max-h-64 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filteredV?.map(v => (<button key={v.id} onClick={() => mapMutation.mutate(v.id)} className="p-4 bg-white/5 rounded-xl text-left hover:bg-brand-accent hover:text-brand-dark transition-all group"><p className="font-bold text-xs uppercase">{v.make} {v.model}</p><p className="text-[10px] opacity-60 group-hover:opacity-100">{v.yearRange}</p></button>))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // --- PHASE 3.2: CUSTOMER DIRECTORY ---
 function CustomerDirectory() {
   const [q, setQ] = useState('');
@@ -330,7 +356,7 @@ function CustomerDirectory() {
   );
 }
 
-// --- PHASE 1: CATEGORIES & VEHICLES ---
+// --- PHASE 1: CATEGORIES ---
 function CategoryManager() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
@@ -345,6 +371,7 @@ function CategoryManager() {
   );
 }
 
+// --- PHASE 1: VEHICLES ---
 function VehicleManager() {
   const queryClient = useQueryClient();
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: adminApi.getVehicles });
@@ -387,7 +414,6 @@ function OperationsSection() {
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Clerk Creation Form */}
         <div className="bg-white/5 border border-white/10 p-6 rounded-2xl space-y-4">
           <h3 className="text-xs font-black uppercase tracking-widest text-brand-accent">Initialize New Clerk</h3>
           <div className="grid grid-cols-2 gap-4">
@@ -396,15 +422,9 @@ function OperationsSection() {
           </div>
           <InputGroup label="Email" val={newClerk.email} set={v => setNewClerk({...newClerk, email:v})} ph="clerk@autohub.com" />
           <InputGroup label="Temp Password" val={newClerk.password} set={v => setNewClerk({...newClerk, password:v})} ph="********" />
-          <button 
-            onClick={() => createClerkMutation.mutate({...newClerk, username: newClerk.email})}
-            className="w-full bg-brand-accent text-brand-dark font-black py-3 rounded-xl uppercase text-xs mt-4"
-          >
-            Deploy Clerk
-          </button>
+          <button onClick={() => createClerkMutation.mutate({...newClerk, username: newClerk.email})} className="w-full bg-brand-accent text-brand-dark font-black py-3 rounded-xl uppercase text-xs mt-4">Deploy Clerk</button>
         </div>
 
-        {/* Clerk Registry */}
         <div className="bg-white/5 border border-white/10 p-6 rounded-2xl space-y-2">
           <h3 className="text-xs font-black uppercase mb-4 tracking-widest">Operator Registry</h3>
           {clerks?.map(c => (<div key={c.id} className="flex justify-between items-center p-3 border border-white/5 rounded-lg"><div><p className="text-xs font-bold">{c.firstName} {c.lastName}</p><p className="text-[10px] text-slate-500 font-mono">{c.email}</p></div><button onClick={() => { if(window.confirm('Revoke access?')) adminApi.deleteClerk(c.id).then(() => queryClient.invalidateQueries(['clerks'])); }} className="text-red-500/50 hover:text-red-500"><Trash2 size={16}/></button></div>))}

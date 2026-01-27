@@ -39,6 +39,9 @@ export default function App() {
     );
   }
 
+  // Helper to determine if user is internal staff
+  const isStaff = user?.role === 'ADMIN' || user?.role === 'CLERK';
+
   return (
     <div className="min-h-screen bg-brand-dark flex">
       {/* Sidebar only appears if a user is logged in */}
@@ -93,9 +96,10 @@ export default function App() {
             </RoleGuard>
           } />
 
-          {/* Administrative Terminal */}
+          {/* Administrative Terminal - NOW OPEN TO CLERKS */}
           <Route path="/admin" element={
-            <RoleGuard allowedRoles={['ADMIN']}>
+            // FIX 1: Allow CLERK access to the Admin Dashboard
+            <RoleGuard allowedRoles={['ADMIN', 'CLERK']}>
               <AdminDashboard />
             </RoleGuard>
           } />
@@ -103,7 +107,8 @@ export default function App() {
           {/* Root Identity Logic */}
           <Route path="/" element={
             !user ? <Navigate to="/login" replace /> : 
-            user.role === 'ADMIN' ? <Navigate to="/admin" replace /> : <Navigate to="/warehouse" replace />
+            // FIX 2: Redirect both ADMIN and CLERK to /admin
+            isStaff ? <Navigate to="/admin" replace /> : <Navigate to="/warehouse" replace />
           } />
           
           {/* Catch-all Fallback */}

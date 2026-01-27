@@ -26,12 +26,12 @@ export default function Login() {
           return;
         }
 
-        // Strict Redirection Mapping
+        // FIX: Redirect CLERK to /admin (Warehouse Terminal)
         switch (result.role) {
           case 'ADMIN':
+          case 'CLERK': // <--- MOVED HERE
             navigate('/admin');
             break;
-          case 'CLERK':
           case 'CUSTOMER':
             navigate('/warehouse');
             break;

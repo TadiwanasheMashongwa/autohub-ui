@@ -22,7 +22,8 @@ export default function Sidebar() {
   const navItems = [
     { label: 'Warehouse', path: '/warehouse', icon: Package, roles: ['ADMIN', 'CLERK', 'CUSTOMER'] },
     { label: 'Orders', path: '/orders', icon: Truck, roles: ['ADMIN', 'CLERK', 'CUSTOMER'] },
-    { label: 'Admin Terminal', path: '/admin', icon: ShieldCheck, roles: ['ADMIN'] },
+    // FIX: Added CLERK to allowed roles for Admin Terminal
+    { label: 'Admin Terminal', path: '/admin', icon: ShieldCheck, roles: ['ADMIN', 'CLERK'] },
     { label: 'Audit Logs', path: '/audit', icon: History, roles: ['ADMIN'] },
   ];
 
