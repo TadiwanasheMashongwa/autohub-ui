@@ -23,6 +23,7 @@ import OrderSuccess from './features/orders/OrderSuccess.jsx';
 
 // Dashboards
 import AdminDashboard from './features/dashboard/AdminDashboard.jsx';
+import ClerkDashboard from './features/dashboard/ClerkDashboard.jsx'; // <--- NEW DEDICATED UI
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -38,9 +39,6 @@ export default function App() {
       </div>
     );
   }
-
-  // Helper to determine if user is internal staff
-  const isStaff = user?.role === 'ADMIN' || user?.role === 'CLERK';
 
   return (
     <div className="min-h-screen bg-brand-dark flex">
@@ -96,9 +94,16 @@ export default function App() {
             </RoleGuard>
           } />
 
-          {/* Administrative Terminal - OPEN TO CLERKS FOR OPERATIONS */}
+          {/* --- DEDICATED CLERK UI --- */}
+          <Route path="/ops" element={
+            <RoleGuard allowedRoles={['CLERK']}>
+              <ClerkDashboard />
+            </RoleGuard>
+          } />
+
+          {/* Administrative Terminal - ADMIN ONLY NOW */}
           <Route path="/admin" element={
-            <RoleGuard allowedRoles={['ADMIN', 'CLERK']}>
+            <RoleGuard allowedRoles={['ADMIN']}>
               <AdminDashboard />
             </RoleGuard>
           } />
@@ -106,8 +111,9 @@ export default function App() {
           {/* Root Identity Logic */}
           <Route path="/" element={
             !user ? <Navigate to="/login" replace /> : 
-            // CLERKS and ADMINS go to the Dashboard (Operations Center)
-            isStaff ? <Navigate to="/admin" replace /> : <Navigate to="/warehouse" replace />
+            user.role === 'CLERK' ? <Navigate to="/ops" replace /> : 
+            user.role === 'ADMIN' ? <Navigate to="/admin" replace /> : 
+            <Navigate to="/warehouse" replace />
           } />
           
           {/* Catch-all Fallback */}

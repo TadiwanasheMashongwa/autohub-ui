@@ -1,36 +1,31 @@
-import { useEffect, useState } from 'react';
-import { orderApi } from '../../api/orderApi';
-import { Package, Clock, CheckCircle, Truck } from 'lucide-react';
+import { Package } from 'lucide-react';
 import { format } from 'date-fns';
+import { useQuery } from '@tanstack/react-query'; // Preserving React Query pattern
+import { orderApi } from '../../api/orderApi';
 
 const StatusBadge = ({ status }) => {
   const configs = {
     PENDING: "bg-amber-500/10 text-amber-500 border-amber-500/20",
     PAID: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-    PICKING: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+    PICKED: "bg-teal-500/10 text-teal-500 border-teal-500/20", // Added for Clerk Sync
     SHIPPED: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
     DELIVERED: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
   };
   return (
-    <span className={`px-2 py-0.5 rounded-md text-[9px] font-black border uppercase tracking-tighter ${configs[status] || configs.PENDING}`}>
+    <span className={`px-2 py-0.5 rounded-md text-[9px] font-black border uppercase tracking-tighter ${configs[status] || "bg-slate-500/10 text-slate-500 border-slate-500/20"}`}>
       {status}
     </span>
   );
 };
 
-// CRITICAL: Ensure 'export default' is present here
 export default function OrderHistory() {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Converted to useQuery to ensure the cache stays in sync with Clerk actions
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ['orders'],
+    queryFn: orderApi.getMyOrders
+  });
 
-  useEffect(() => {
-    orderApi.getMyOrders()
-      .then(setOrders)
-      .catch(err => console.error("Archive fetch failed:", err))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return (
+  if (isLoading) return (
     <div className="p-8 text-slate-500 font-mono text-xs animate-pulse">
       SCANNING ORDER MANIFESTS...
     </div>
@@ -53,7 +48,7 @@ export default function OrderHistory() {
           </div>
         ) : (
           orders.map(order => (
-            <div key={order.id} className="bg-slate-900/50 border border-white/5 p-6 rounded-2xl">
+            <div key={order.id} className="bg-slate-900/50 border border-white/5 p-6 rounded-2xl hover:border-brand-accent/20 transition-all">
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
                   <div className="flex items-center gap-3">
@@ -65,7 +60,9 @@ export default function OrderHistory() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-black text-white">${order.totalAmount?.toFixed(2)}</p>
+                  <p className="text-2xl font-black text-white">
+                    ${Number(order.totalAmount || 0).toFixed(2)}
+                  </p>
                 </div>
               </div>
             </div>

@@ -29,11 +29,7 @@ export const adminApi = {
   getReviews: async (negativeOnly = false) => (await apiClient.get(`/admin/reviews?negativeOnly=${negativeOnly}`)).data,
   deleteReview: async (id) => (await apiClient.delete(`/admin/reviews/${id}`)).data,
 
-  // --- PHASE 5: FINANCIALS & LOGISTICS (NEW) ---
-  getActiveOrders: async () => (await apiClient.get('/admin/orders/active')).data,
-  updateLogistics: async (id, data) => (await apiClient.patch(`/admin/orders/${id}/logistics`, data)).data,
-  processRefund: async (id) => (await apiClient.post(`/admin/orders/${id}/refund`)).data,
-
+  // --- PHASE 5: FINANCIALS & LOGISTICS ---
   getActiveOrders: async () => (await apiClient.get('/admin/orders/active')).data,
   verifyPick: async (id, barcodeMap) => (await apiClient.post(`/admin/orders/${id}/verify-pick`, barcodeMap)).data,
   updateLogistics: async (id, data) => (await apiClient.patch(`/admin/orders/${id}/logistics`, data)).data,
