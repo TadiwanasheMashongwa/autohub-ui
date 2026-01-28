@@ -1,16 +1,17 @@
 import { Package } from 'lucide-react';
-import { format } from 'date-fns';
-import { useQuery } from '@tanstack/react-query'; // Preserving React Query pattern
+import { format, isValid } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
 import { orderApi } from '../../api/orderApi';
 
 const StatusBadge = ({ status }) => {
   const configs = {
     PENDING: "bg-amber-500/10 text-amber-500 border-amber-500/20",
     PAID: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-    PICKED: "bg-teal-500/10 text-teal-500 border-teal-500/20", // Added for Clerk Sync
+    PICKED: "bg-teal-500/10 text-teal-500 border-teal-500/20",
     SHIPPED: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
     DELIVERED: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
   };
+  
   return (
     <span className={`px-2 py-0.5 rounded-md text-[9px] font-black border uppercase tracking-tighter ${configs[status] || "bg-slate-500/10 text-slate-500 border-slate-500/20"}`}>
       {status}
@@ -19,11 +20,17 @@ const StatusBadge = ({ status }) => {
 };
 
 export default function OrderHistory() {
-  // Converted to useQuery to ensure the cache stays in sync with Clerk actions
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders'],
     queryFn: orderApi.getMyOrders
   });
+
+  // Helper to safely parse and format dates without crashing
+  const safeFormatDate = (dateValue) => {
+    if (!dateValue) return 'Date Unknown';
+    const date = new Date(dateValue);
+    return isValid(date) ? format(date, 'PPP p') : 'Date Unknown';
+  };
 
   if (isLoading) return (
     <div className="p-8 text-slate-500 font-mono text-xs animate-pulse">
@@ -55,8 +62,8 @@ export default function OrderHistory() {
                     <span className="text-white font-bold text-lg">Order #{order.id}</span>
                     <StatusBadge status={order.status} />
                   </div>
-                  <p className="text-slate-500 text-xs">
-                    {order.orderDate ? format(new Date(order.orderDate), 'PPP p') : 'Date Unknown'}
+                  <p className="text-slate-500 text-xs font-mono">
+                    {safeFormatDate(order.orderDate)}
                   </p>
                 </div>
                 <div className="text-right">
