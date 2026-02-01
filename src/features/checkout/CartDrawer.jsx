@@ -1,5 +1,5 @@
 import { useCart } from '../../context/CartContext';
-import { X, Trash2, ShoppingBag, CreditCard } from 'lucide-react';
+import { X, Trash2, ShoppingBag, CreditCard, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function CartDrawer() {
@@ -8,7 +8,6 @@ export default function CartDrawer() {
 
   if (!isDrawerOpen) return null;
 
-  // Logic: Close drawer and navigate to the full cart/checkout view
   const handleProceed = () => {
     setIsDrawerOpen(false);
     navigate('/cart');
@@ -16,7 +15,6 @@ export default function CartDrawer() {
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" 
         onClick={() => setIsDrawerOpen(false)} 
@@ -26,10 +24,9 @@ export default function CartDrawer() {
         <div className="w-screen max-w-md bg-brand-dark border-l border-white/10 shadow-2xl">
           <div className="h-full flex flex-col p-6">
             
-            {/* Header */}
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-2">
-                <ShoppingBag className="h-6 w-6 text-brand-accent" />
+                < ShoppingBag className="h-6 w-6 text-brand-accent" />
                 <h2 className="text-xl font-black text-white uppercase tracking-tighter">Current Order</h2>
               </div>
               <button 
@@ -40,11 +37,19 @@ export default function CartDrawer() {
               </button>
             </div>
 
-            {/* Scrollable Item List */}
             <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
               {cart?.items?.length > 0 ? (
                 cart.items.map((item) => (
                   <div key={item.id} className="flex gap-4 bg-white/5 p-4 rounded-xl border border-white/5 group hover:border-brand-accent/20 transition-all">
+                    {/* Visual Identifier */}
+                    <div className="h-16 w-16 bg-black/40 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden border border-white/5">
+                      {item.part?.imageUrl ? (
+                        <img src={item.part.imageUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <Package className="h-6 w-6 text-slate-700" />
+                      )}
+                    </div>
+
                     <div className="flex-1">
                       <h4 className="text-white font-bold text-sm truncate uppercase tracking-tight">
                         {item.part.name}
@@ -74,7 +79,6 @@ export default function CartDrawer() {
               )}
             </div>
 
-            {/* Footer Summary & Navigation */}
             {cart?.items?.length > 0 && (
               <div className="border-t border-white/10 pt-6 mt-6 space-y-4">
                 <div className="flex justify-between text-slate-400 font-mono text-[10px] uppercase tracking-widest">

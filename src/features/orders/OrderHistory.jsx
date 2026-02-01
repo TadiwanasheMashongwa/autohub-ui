@@ -25,7 +25,6 @@ export default function OrderHistory() {
     queryFn: orderApi.getMyOrders
   });
 
-  // Helper to safely parse and format dates without crashing
   const safeFormatDate = (dateValue) => {
     if (!dateValue) return 'Date Unknown';
     const date = new Date(dateValue);
@@ -56,7 +55,7 @@ export default function OrderHistory() {
         ) : (
           orders.map(order => (
             <div key={order.id} className="bg-slate-900/50 border border-white/5 p-6 rounded-2xl hover:border-brand-accent/20 transition-all">
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start mb-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-3">
                     <span className="text-white font-bold text-lg">Order #{order.id}</span>
@@ -71,6 +70,23 @@ export default function OrderHistory() {
                     ${Number(order.totalAmount || 0).toFixed(2)}
                   </p>
                 </div>
+              </div>
+
+              {/* Visual Strip for Customer Verification */}
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                {order.items?.map((item, idx) => (
+                  <div key={idx} className="h-12 w-12 rounded bg-black/40 border border-white/5 flex-shrink-0 overflow-hidden group relative">
+                    {item.part?.imageUrl ? (
+                      <img 
+                        src={item.part.imageUrl} 
+                        alt=""
+                        className="h-full w-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                      />
+                    ) : (
+                      <Package className="h-full w-full p-3 opacity-20" />
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           ))
