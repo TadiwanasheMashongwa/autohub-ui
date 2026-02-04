@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { partsApi } from '../../api/partsApi';
 import { useAuth } from '../auth/AuthContext';
-import { useCart } from '../../context/CartContext'; // NEW
+import { useCart } from '../../context/CartContext';
+import { getImageUrl } from '../../utils/imageHelper'; // 🛠️ CRITICAL IMPORT
 import { 
   ChevronLeft, ShoppingCart, ShieldCheck, 
   Weight, Maximize, Settings, Box, 
@@ -15,13 +16,13 @@ export default function PartDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { addItem } = useCart(); // NEW
+  const { addItem } = useCart();
   
   const isStaff = user?.role === 'ADMIN' || user?.role === 'CLERK';
   
   const [part, setPart] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [quantity, setQuantity] = useState(1); // NEW
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -70,9 +71,10 @@ export default function PartDetail() {
         <div className="space-y-6">
           <div className="aspect-square bg-black/40 border border-white/5 rounded-[3.5rem] flex items-center justify-center overflow-hidden relative group">
             <img 
-              src={part.imageUrl || '/placeholder-part.png'} 
+              src={getImageUrl(part.imageUrl)} // 🛠️ FIXED: Now points to 8080/uploads
               alt={part.name}
               className="w-3/4 object-contain group-hover:scale-105 transition-transform duration-700"
+              onError={(e) => { e.target.src = '/placeholder-part.png'; }} // Safety fallback
             />
             {part.condition === 'NEW' && (
               <div className="absolute top-10 left-10 bg-brand-accent text-brand-dark px-5 py-1.5 rounded-xl text-xs font-black uppercase italic shadow-2xl">
@@ -104,7 +106,6 @@ export default function PartDetail() {
             </div>
           </header>
 
-          {/* CHECKLIST STEP 3: Fulfillment Terminal with Quantity Selector */}
           <div className="bg-white/5 border border-white/10 rounded-[3rem] p-8 mb-12 shadow-2xl">
             <div className="flex items-end justify-between mb-8">
               <div>
@@ -121,7 +122,6 @@ export default function PartDetail() {
             </div>
 
             <div className="flex gap-4">
-              {/* Quantity Selector */}
               <div className="flex items-center bg-black/40 border border-white/10 rounded-2xl px-4">
                 <button 
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
