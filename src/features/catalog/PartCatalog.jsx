@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import PartCard from './PartCard';
 import PartFilters from './PartFilters';
 import VehicleSelector from './VehicleSelector';
-import { Search, Loader2, PackageSearch, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Loader2, PackageSearch } from 'lucide-react';
 import { toast } from '../../context/NotificationContext';
 
 export default function PartCatalog() {
@@ -14,19 +14,43 @@ export default function PartCatalog() {
   const [parts, setParts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // State for Filters
   const [activeFilters, setActiveFilters] = useState({ categoryId: null, brand: null, condition: null });
   const [selectedVehicle, setSelectedVehicle] = useState(null);
+  
   const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
+
+  // 🛠️ HANDLER 1: User selects a Filter (Category/Brand)
+  const handleFilterChange = (newFilters) => {
+    // If we are setting a Category, we MUST clear the Vehicle to avoid conflict
+    if (newFilters.categoryId && newFilters.categoryId !== activeFilters.categoryId) {
+      setSelectedVehicle(null); 
+    }
+    setActiveFilters(newFilters);
+    setPage(0);
+  };
+
+  // 🛠️ HANDLER 2: User selects a Vehicle
+  const handleVehicleSelect = (vehicle) => {
+    // If we are setting a Vehicle, we MUST clear the Category
+    if (vehicle) {
+      setActiveFilters({ categoryId: null, brand: null, condition: null });
+      setSearchQuery('');
+    }
+    setSelectedVehicle(vehicle);
+    setPage(0);
+  };
 
   const fetchInventory = useCallback(async () => {
     setLoading(true);
-    // CRITICAL: Flush state to prevent "Duplicate Key" errors during re-renders
+    // Explicitly empty parts to show loading state cleanly
     setParts([]); 
-    
+
     try {
       let data;
       
+      // PRIORITY LOGIC: Vehicle > Search > Category > All
       if (selectedVehicle) {
         data = await partsApi.getPartsByVehicle(selectedVehicle.id, page);
       } else if (searchQuery) {
@@ -38,9 +62,8 @@ export default function PartCatalog() {
       }
 
       setParts(data.content || []);
-      setTotalPages(data.totalPages || 0);
     } catch (error) {
-      toast.show("Inventory Link Failure: Synchronizing...", "error");
+      toast.show("Inventory Sync Failed", "error");
     } finally {
       setLoading(false);
     }
@@ -53,21 +76,17 @@ export default function PartCatalog() {
 
   return (
     <div className="flex bg-brand-dark min-h-screen">
+      {/* Sidebar */}
       <PartFilters 
         activeFilters={activeFilters}
-        onFilterChange={(f) => { 
-          setActiveFilters(f); 
-          setPage(0); 
-        }}
+        onFilterChange={handleFilterChange} // Uses the new mutual exclusion handler
       />
 
+      {/* Main Content */}
       <div className="flex-1 px-10 py-10 max-w-[1600px] mx-auto">
         <VehicleSelector 
           selectedVehicle={selectedVehicle}
-          onVehicleSelect={(v) => { 
-            setSelectedVehicle(v); 
-            setPage(0); 
-          }}
+          onVehicleSelect={handleVehicleSelect} // Uses the new mutual exclusion handler
         />
 
         <header className="mb-12 flex flex-col xl:flex-row xl:items-center justify-between gap-8">
@@ -85,12 +104,15 @@ export default function PartCatalog() {
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-600 group-focus-within:text-brand-accent transition-colors" />
             <input
               type="text"
-              placeholder={isStaff ? "Search SKU, OEM, or Bin Location..." : "Search for high-performance parts..."}
+              placeholder={isStaff ? "Search SKU, OEM..." : "Search parts..."}
               className="w-full bg-white/5 border border-white/10 rounded-2xl py-4.5 pl-14 pr-6 text-white focus:outline-none focus:border-brand-accent/40 transition-all shadow-2xl font-medium"
               value={searchQuery}
               onChange={(e) => { 
                 setSearchQuery(e.target.value); 
-                setPage(0); 
+                // Clear other strict filters when searching
+                setSelectedVehicle(null);
+                setActiveFilters({ categoryId: null, brand: null, condition: null });
+                setPage(0);
               }}
             />
           </div>
@@ -109,26 +131,6 @@ export default function PartCatalog() {
             <PackageSearch className="h-16 w-16 mb-4 text-slate-800" />
             <p className="text-white font-black uppercase text-xs tracking-widest">No matching assets in this sector</p>
           </div>
-        )}
-
-        {totalPages > 1 && (
-          <footer className="mt-16 flex items-center justify-center gap-6 pt-10 border-t border-white/5">
-            <button 
-              disabled={page === 0} 
-              onClick={() => setPage(p => p - 1)}
-              className="h-12 w-12 flex items-center justify-center rounded-2xl bg-white/5 text-slate-400 hover:text-brand-accent disabled:opacity-20 transition-all"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <span className="text-sm font-black text-white font-mono">{page + 1} / {totalPages}</span>
-            <button 
-              disabled={page >= totalPages - 1} 
-              onClick={() => setPage(p => p + 1)}
-              className="h-12 w-12 flex items-center justify-center rounded-2xl bg-white/5 text-slate-400 hover:text-brand-accent disabled:opacity-20 transition-all"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </footer>
         )}
       </div>
     </div>

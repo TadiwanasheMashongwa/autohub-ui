@@ -12,16 +12,32 @@ export default function VehicleSelector({ onVehicleSelect, selectedVehicle }) {
   const [selection, setSelection] = useState({ make: '', model: '', yearRange: '' });
   const [loading, setLoading] = useState(false);
 
-  // Step 1: Load Makes on mount
+  // 🛠️ CRITICAL FIX: Sync Internal State with Parent Prop
+  // If the parent (PartCatalog) clears the vehicle (e.g. user clicked a Category),
+  // we must reset the internal wizard state back to 'MAKE'.
   useEffect(() => {
-    if (step === 'MAKE') {
+    if (!selectedVehicle) {
+      setSelection({ make: '', model: '', yearRange: '' });
+      setStep('MAKE');
+      // Re-fetch makes to ensure the list is ready
       setLoading(true);
       vehiclesApi.getMakes()
         .then(setOptions)
         .catch(() => console.error("Vehicle API Sync Failed"))
         .finally(() => setLoading(false));
     }
-  }, [step]);
+  }, [selectedVehicle]);
+
+  // Initial Load
+  useEffect(() => {
+    if (step === 'MAKE' && !selectedVehicle) {
+      setLoading(true);
+      vehiclesApi.getMakes()
+        .then(setOptions)
+        .catch(() => console.error("Vehicle API Sync Failed"))
+        .finally(() => setLoading(false));
+    }
+  }, [step, selectedVehicle]);
 
   const handleMakeSelect = async (make) => {
     setSelection({ ...selection, make });
