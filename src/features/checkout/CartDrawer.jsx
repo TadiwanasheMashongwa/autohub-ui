@@ -1,6 +1,7 @@
 import { useCart } from '../../context/CartContext';
 import { X, Trash2, ShoppingBag, CreditCard, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getImageUrl } from '../../utils/imageHelper';
 
 export default function CartDrawer() {
   const { cart, removeItem, isDrawerOpen, setIsDrawerOpen } = useCart();
@@ -41,13 +42,14 @@ export default function CartDrawer() {
               {cart?.items?.length > 0 ? (
                 cart.items.map((item) => (
                   <div key={item.id} className="flex gap-4 bg-white/5 p-4 rounded-xl border border-white/5 group hover:border-brand-accent/20 transition-all">
-                    {/* Visual Identifier */}
+                    {/* Visual Identifier - Fixed Port Mapping */}
                     <div className="h-16 w-16 bg-black/40 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden border border-white/5">
-                      {item.part?.imageUrl ? (
-                        <img src={item.part.imageUrl} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <Package className="h-6 w-6 text-slate-700" />
-                      )}
+                      <img 
+                        src={getImageUrl(item.part?.imageUrl)} 
+                        alt="" 
+                        className="h-full w-full object-cover" 
+                        onError={(e) => { e.target.src = '/placeholder-part.png'; }}
+                      />
                     </div>
 
                     <div className="flex-1">

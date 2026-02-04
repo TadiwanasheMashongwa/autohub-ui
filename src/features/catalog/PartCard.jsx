@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { ShoppingCart, Star, MapPin, Plus, Minus } from 'lucide-react';
+import { getImageUrl } from '../../utils/imageHelper';
 
 export default function PartCard({ part }) {
   const { user } = useAuth();
@@ -14,10 +15,10 @@ export default function PartCard({ part }) {
   const isLowStock = inStock && part.stockQuantity <= 5;
 
   const handleAddToCart = (e) => {
-    e.preventDefault(); // Prevents the Link from triggering
+    e.preventDefault(); 
     e.stopPropagation();
     addItem(part.id, qty);
-    setQty(1); // Reset local quantity after adding
+    setQty(1); 
   };
 
   const adjustQty = (e, delta) => {
@@ -50,7 +51,12 @@ export default function PartCard({ part }) {
 
       {/* Visual & Info Area */}
       <div className="h-48 bg-black/40 rounded-3xl mb-6 flex items-center justify-center overflow-hidden">
-        <img src={part.imageUrl || '/placeholder-part.png'} className="h-36 w-36 object-contain group-hover:scale-110 transition-all" alt={part.name} />
+        <img 
+          src={getImageUrl(part.imageUrl)} 
+          className="h-36 w-36 object-contain group-hover:scale-110 transition-all" 
+          alt={part.name} 
+          onError={(e) => { e.target.src = '/placeholder-part.png'; }}
+        />
       </div>
 
       <div className="flex-1 space-y-3">
