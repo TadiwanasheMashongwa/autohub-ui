@@ -1,5 +1,6 @@
 import { useCart } from '../../context/CartContext';
 import { Link } from 'react-router-dom';
+import { getImageUrl } from '../../utils/imageHelper';
 import { 
   Trash2, 
   Minus, 
@@ -14,7 +15,6 @@ import {
 export default function CartPage() {
   const { cart, removeItem, updateQuantity, loading } = useCart();
 
-  // 1. Initial Loading State
   if (loading && !cart) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center space-y-4">
@@ -24,7 +24,6 @@ export default function CartPage() {
     );
   }
 
-  // 2. Empty State Logic
   if (!cart || !cart.items || cart.items.length === 0) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center space-y-6 text-center">
@@ -60,27 +59,21 @@ export default function CartPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-        {/* Main List */}
         <div className="lg:col-span-2 space-y-4">
           {cart.items.map((item) => (
             <div 
               key={item.id} 
               className="bg-white/5 border border-white/5 p-6 rounded-2xl flex flex-col sm:flex-row items-center gap-6 group hover:border-brand-accent/20 transition-all"
             >
-              {/* Part Visualizer */}
               <div className="h-24 w-24 bg-black/40 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-white/5">
-                {item.part?.imageUrl ? (
-                  <img 
-                    src={item.part.imageUrl} 
-                    alt={item.part.name} 
-                    className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500" 
-                  />
-                ) : (
-                  <Package className="h-8 w-8 text-slate-700" />
-                )}
+                <img 
+                  src={getImageUrl(item.part?.imageUrl)} 
+                  alt={item.part?.name || "Part"} 
+                  onError={(e) => { e.target.src = '/placeholder-part.png'; }}
+                  className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500" 
+                />
               </div>
 
-              {/* Identity & Pricing */}
               <div className="flex-1 space-y-1 text-center sm:text-left">
                 <h3 className="text-white font-bold uppercase tracking-tight">
                   {item.part?.name || "Unknown Component"}
@@ -93,7 +86,6 @@ export default function CartPage() {
                 </p>
               </div>
 
-              {/* Quantity Controls */}
               <div className="flex items-center gap-4 bg-black/40 p-1 rounded-xl border border-white/5">
                 <button 
                   onClick={() => updateQuantity(item.id, item.quantity - 1)}
@@ -114,7 +106,6 @@ export default function CartPage() {
                 </button>
               </div>
 
-              {/* Destructive Action */}
               <button 
                 onClick={() => removeItem(item.id)}
                 disabled={loading}
@@ -126,7 +117,6 @@ export default function CartPage() {
           ))}
         </div>
 
-        {/* Summary Sidebar */}
         <div className="space-y-6">
           <div className="bg-white/5 border border-white/10 p-8 rounded-2xl sticky top-24 space-y-6 backdrop-blur-sm">
             <h3 className="text-white font-black uppercase text-sm tracking-widest border-b border-white/5 pb-4">
@@ -151,7 +141,6 @@ export default function CartPage() {
               </span>
             </div>
 
-            {/* FIXED: Removed the loading-based pointer-events and opacity blocks */}
             <Link 
               to="/checkout"
               className="w-full flex items-center justify-center gap-3 py-5 bg-brand-accent text-brand-dark font-black uppercase tracking-widest rounded-xl hover:bg-teal-400 hover:scale-[1.02] active:scale-[0.98] transition-all"

@@ -1,7 +1,8 @@
-import { Package } from 'lucide-react';
+import { Package, User, Star } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { orderApi } from '../../api/orderApi';
+import { getImageUrl } from '../../utils/imageHelper';
 
 const StatusBadge = ({ status }) => {
   const configs = {
@@ -72,19 +73,15 @@ export default function OrderHistory() {
                 </div>
               </div>
 
-              {/* Visual Strip for Customer Verification */}
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                 {order.items?.map((item, idx) => (
                   <div key={idx} className="h-12 w-12 rounded bg-black/40 border border-white/5 flex-shrink-0 overflow-hidden group relative">
-                    {item.part?.imageUrl ? (
-                      <img 
-                        src={item.part.imageUrl} 
-                        alt=""
-                        className="h-full w-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                      />
-                    ) : (
-                      <Package className="h-full w-full p-3 opacity-20" />
-                    )}
+                    <img 
+                      src={getImageUrl(item.part?.imageUrl)} 
+                      alt=""
+                      onError={(e) => { e.target.src = '/placeholder-part.png'; }}
+                      className="h-full w-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                    />
                   </div>
                 ))}
               </div>

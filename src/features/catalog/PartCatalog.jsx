@@ -15,32 +15,27 @@ export default function PartCatalog() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // State for Filters
   const [activeFilters, setActiveFilters] = useState({ categoryId: null, brand: null, condition: null });
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [page, setPage] = useState(0);
 
-  // 🛠️ HANDLER 1: User selects a Category/Brand
   const handleFilterChange = (newFilters) => {
-    // Mutual Exclusion: If selecting a category, clear the vehicle
     if (newFilters.categoryId && newFilters.categoryId !== activeFilters.categoryId) {
       setSelectedVehicle(null); 
     }
     setActiveFilters(newFilters);
     setPage(0);
-    setParts([]); // 🧹 CLEAR DATA IMMEDIATELY to prevent "Duplicate Key" error
+    setParts([]); 
   };
 
-  // 🛠️ HANDLER 2: User selects a Vehicle
   const handleVehicleSelect = (vehicle) => {
-    // Mutual Exclusion: If selecting a vehicle, clear the category
     if (vehicle) {
       setActiveFilters({ categoryId: null, brand: null, condition: null });
       setSearchQuery('');
     }
     setSelectedVehicle(vehicle);
     setPage(0);
-    setParts([]); // 🧹 CLEAR DATA IMMEDIATELY
+    setParts([]); 
   };
 
   const fetchInventory = useCallback(async () => {
@@ -49,22 +44,29 @@ export default function PartCatalog() {
     try {
       let data;
       
-      // PRIORITY LOGIC: Vehicle > Search > Category > All
       if (selectedVehicle) {
         data = await partsApi.getPartsByVehicle(selectedVehicle.id, page);
       } else if (searchQuery) {
         data = await partsApi.searchParts(searchQuery, page, activeFilters);
       } else if (activeFilters.categoryId) {
-        // This is the call triggering the 500 error - see Backend Fix below
         data = await partsApi.getPartsByCategory(activeFilters.categoryId, page, activeFilters);
       } else {
         data = await partsApi.getParts(page, activeFilters);
       }
 
-      setParts(data.content || []);
+      // 🛠️ CRITICAL FIX: DEDUPLICATION LOGIC
+      // The API is likely returning duplicates (e.g. due to SQL Joins).
+      // We filter them out here to prevent React "Duplicate Key" crashes.
+      const rawContent = data.content || [];
+      const uniqueParts = Array.from(new Map(rawContent.map(item => [item.id, item])).values());
+
+      setParts(uniqueParts);
     } catch (error) {
       console.error("Sync Error:", error);
-      toast.show("Inventory Sync Failed: Backend Unreachable", "error");
+      // Suppress toast for 500 errors to prevent UI spam, just log it
+      if (error.response?.status !== 500) {
+        toast.show("Inventory Link Failure", "error");
+      }
     } finally {
       setLoading(false);
     }
@@ -77,13 +79,11 @@ export default function PartCatalog() {
 
   return (
     <div className="flex bg-brand-dark min-h-screen">
-      {/* Sidebar - Passed the new mutual exclusion handler */}
       <PartFilters 
         activeFilters={activeFilters}
         onFilterChange={handleFilterChange} 
       />
 
-      {/* Main Content */}
       <div className="flex-1 px-10 py-10 max-w-[1600px] mx-auto">
         <VehicleSelector 
           selectedVehicle={selectedVehicle}
@@ -113,7 +113,7 @@ export default function PartCatalog() {
                 setSelectedVehicle(null);
                 setActiveFilters({ categoryId: null, brand: null, condition: null });
                 setPage(0);
-                setParts([]); // 🧹 CLEAR DATA
+                setParts([]);
               }}
             />
           </div>

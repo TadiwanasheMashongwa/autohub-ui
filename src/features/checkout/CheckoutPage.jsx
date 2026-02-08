@@ -4,6 +4,7 @@ import CheckoutForm from './CheckoutForm';
 import { useCart } from '../../context/CartContext';
 import { Navigate } from 'react-router-dom';
 import { Package } from 'lucide-react';
+import { getImageUrl } from '../../utils/imageHelper';
 
 const stripePromise = loadStripe('pk_test_51Stp4xD1eq0ujxUIZxERSvROdoOhbp1MZvOSSTO07q1bB7T7pcETINS2l7GGOZc0Sc6lsys7XjKqv3G8cEwvXziX00ktMWr5nh');
 
@@ -43,11 +44,12 @@ export default function CheckoutPage() {
               <div key={item.id} className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 bg-black/40 rounded border border-white/5 flex-shrink-0 overflow-hidden">
-                    {item.part?.imageUrl ? (
-                      <img src={item.part.imageUrl} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <Package className="h-full w-full p-2 opacity-20" />
-                    )}
+                    <img 
+                      src={getImageUrl(item.part?.imageUrl)} 
+                      alt="" 
+                      onError={(e) => { e.target.src = '/placeholder-part.png'; }}
+                      className="h-full w-full object-cover" 
+                    />
                   </div>
                   <div>
                     <p className="text-sm text-slate-300 font-bold uppercase truncate max-w-[200px]">
