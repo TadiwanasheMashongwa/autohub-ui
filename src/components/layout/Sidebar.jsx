@@ -1,16 +1,16 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../features/auth/AuthContext.jsx';
 import { useCart } from '../../context/CartContext';
+import { useQuery } from '@tanstack/react-query';
+import { orderApi } from '../../api/orderApi';
 import { 
-  LayoutDashboard, 
   Package, 
   History, 
   LogOut, 
   ShieldCheck,
   Truck,
   ShoppingBag,
-  ClipboardCheck,
-  Settings
+  ClipboardCheck
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -20,16 +20,17 @@ export default function Sidebar() {
 
   const isActive = (path) => location.pathname.startsWith(path);
 
-  // DEDICATED NAVIGATION MAPPING
+  // 🛠️ FETCH ORDER COUNT: Synchronizes with Order Archives
+  const { data: orders = [] } = useQuery({
+    queryKey: ['orders'],
+    queryFn: orderApi.getMyOrders,
+    enabled: !!user // Only fetch if user is logged in
+  });
+
   const navItems = [
-    // Storefront & Tracking (Visible to Customers & Admin)
     { label: 'Warehouse', path: '/warehouse', icon: Package, roles: ['ADMIN', 'CUSTOMER'] },
-    { label: 'Orders', path: '/orders', icon: Truck, roles: ['ADMIN', 'CUSTOMER'] },
-    
-    // CLERK WORKSPACE (Isolated)
+    { label: 'Orders', path: '/orders', icon: Truck, roles: ['ADMIN', 'CUSTOMER'], badge: orders.length },
     { label: 'Warehouse Ops', path: '/ops', icon: ClipboardCheck, roles: ['CLERK'] },
-    
-    // ADMIN COMMAND CENTER
     { label: 'Admin Terminal', path: '/admin', icon: ShieldCheck, roles: ['ADMIN'] },
     { label: 'Audit Logs', path: '/audit', icon: History, roles: ['ADMIN'] },
   ];
@@ -56,14 +57,27 @@ export default function Sidebar() {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all group ${
+              className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all group ${
                 isActive(item.path) 
                 ? 'bg-brand-accent text-brand-dark font-bold' 
                 : 'text-slate-400 hover:bg-white/5 hover:text-white'
               }`}
             >
-              <item.icon className={`h-5 w-5 ${isActive(item.path) ? 'text-brand-dark' : 'text-slate-500 group-hover:text-brand-accent'}`} />
-              <span className="text-sm uppercase tracking-wide">{item.label}</span>
+              <div className="flex items-center gap-3">
+                <item.icon className={`h-5 w-5 ${isActive(item.path) ? 'text-brand-dark' : 'text-slate-500 group-hover:text-brand-accent'}`} />
+                <span className="text-sm uppercase tracking-wide">{item.label}</span>
+              </div>
+
+              {/* 🛠️ ORDER NOTIFICATION BADGE: Replicates Cart Styling */}
+              {item.badge > 0 && (
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full transition-all ${
+                  isActive(item.path)
+                  ? 'bg-brand-dark/20 text-brand-dark'
+                  : 'bg-brand-accent text-brand-dark animate-pulse'
+                }`}>
+                  {item.badge}
+                </span>
+              )}
             </Link>
           ))}
 
