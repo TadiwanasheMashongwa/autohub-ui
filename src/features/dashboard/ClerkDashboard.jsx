@@ -36,22 +36,28 @@ export default function ClerkDashboard() {
 
 function DispatchConsole() {
   const queryClient = useQueryClient();
-  const { data: orders, isLoading } = useQuery({ queryKey: ['active-orders'], queryFn: adminApi.getActiveOrders });
-  const [activeManifest, setActiveManifest] = useState(null);
+  const { data: orders, isLoading } = useQuery({ 
+    queryKey: ['active-orders'], 
+    queryFn: adminApi.getActiveOrders 
+  });
   
+  const [activeManifest, setActiveManifest] = useState(null);
   const [shippingId, setShippingId] = useState(null);
   const [logistics, setLogistics] = useState({ courier: '', tracking: '' });
 
   const updateLogistics = useMutation({
-    mutationFn: (id) => adminApi.updateLogistics(id, logistics),
+    mutationFn: (id) => adminApi.updateLogistics(id, {
+      courier: logistics.courier,
+      tracking: logistics.tracking
+    }),
     onSuccess: () => {
-      // SYNC: Invalidate both Clerk and Customer views
       queryClient.invalidateQueries(['active-orders']);
       queryClient.invalidateQueries(['orders']); 
       setShippingId(null);
       setLogistics({ courier: '', tracking: '' });
       toast.show("Shipping Confirmed. Customer Notified.", "success");
-    }
+    },
+    onError: () => toast.show("Terminal Restricted: Access Denied", "error")
   });
 
   if (isLoading) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-brand-accent h-8 w-8"/></div>;
@@ -103,17 +109,17 @@ function DispatchConsole() {
                   ) : o.status === 'PICKED' ? (
                     shippingId === o.id ? (
                         <div className="flex gap-2 justify-end animate-in slide-in-from-right">
-                          <input placeholder="Courier" className="bg-black/40 border border-white/10 p-2 rounded text-[10px] w-24 outline-none focus:border-brand-accent" value={logistics.courier} onChange={e => setLogistics({...logistics, courier: e.target.value})} />
-                          <input placeholder="Tracking #" className="bg-black/40 border border-white/10 p-2 rounded text-[10px] w-32 outline-none focus:border-brand-accent" value={logistics.tracking} onChange={e => setLogistics({...logistics, tracking: e.target.value})} />
-                          <button onClick={() => updateLogistics.mutate(o.id)} disabled={!logistics.courier || !logistics.tracking} className="bg-teal-500 text-black p-2 rounded hover:bg-teal-400 disabled:opacity-50">Save</button>
-                          <button onClick={() => setShippingId(null)} className="p-2 text-slate-500"><X size={14}/></button>
+                          <input placeholder="Courier" className="bg-black/40 border border-white/10 p-2 rounded text-[10px] w-24 outline-none focus:border-brand-accent text-white" value={logistics.courier} onChange={e => setLogistics({...logistics, courier: e.target.value})} />
+                          <input placeholder="Tracking #" className="bg-black/40 border border-white/10 p-2 rounded text-[10px] w-32 outline-none focus:border-brand-accent text-white" value={logistics.tracking} onChange={e => setLogistics({...logistics, tracking: e.target.value})} />
+                          <button onClick={() => updateLogistics.mutate(o.id)} disabled={!logistics.courier || !logistics.tracking} className="bg-teal-500 text-black px-3 rounded font-bold hover:bg-teal-400 disabled:opacity-50 text-[10px] uppercase">Save</button>
+                          <button onClick={() => setShippingId(null)} className="p-2 text-slate-500 hover:text-white"><X size={14}/></button>
                         </div>
                       ) : (
-                        <button onClick={() => setShippingId(o.id)} className="bg-white/10 px-4 py-2 rounded-lg font-bold uppercase text-[10px] ml-auto hover:bg-white/20 transition-all">
+                        <button onClick={() => setShippingId(o.id)} className="bg-white/10 px-4 py-2 rounded-lg font-bold uppercase text-[10px] ml-auto hover:bg-white/20 transition-all text-white">
                           Dispatch
                         </button>
                       )
-                  ) : <span className="text-slate-600 text-[10px] uppercase font-bold italic opacity-50">Processing</span>}
+                  ) : <span className="text-slate-600 text-[10px] uppercase font-bold italic opacity-50">Locked</span>}
                 </td>
               </tr>
             ))}
@@ -130,15 +136,14 @@ function PickingTerminal({ order, onBack }) {
   const [feedback, setFeedback] = useState({});
 
   const verifyMutation = useMutation({
-    mutationFn: (map) => adminApi.verifyPick(order.id, map),
+    mutationFn: () => adminApi.verifyPick(order.id),
     onSuccess: () => {
-      // SYNC: Update both views
       queryClient.invalidateQueries(['active-orders']);
       queryClient.invalidateQueries(['orders']); 
       toast.show("Manifest Verified & Locked.", "success");
       onBack();
     },
-    onError: (err) => toast.show("Barcode Verification Failed", "error")
+    onError: () => toast.show("Barcode Verification Failed", "error")
   });
 
   const handleScan = (itemId, val, correct) => {
@@ -157,7 +162,7 @@ function PickingTerminal({ order, onBack }) {
           <h2 className="text-2xl font-black uppercase tracking-tighter text-white">Picking Manifest <span className="text-brand-accent">#{order.id}</span></h2>
           <p className="text-xs text-slate-500 font-mono mt-1 uppercase">Scan all items to verify physical stock</p>
         </div>
-        <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full"><X/></button>
+        <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full text-white"><X/></button>
       </div>
 
       <div className="space-y-4">
@@ -173,14 +178,14 @@ function PickingTerminal({ order, onBack }) {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-[10px] font-black bg-white/10 px-2 py-0.5 rounded text-white uppercase">Bin: {item.part.binLocation || 'A-00'}</span>
-                    <span className="text-[10px] font-mono opacity-50 uppercase">{item.part.sku}</span>
+                    <span className="text-[10px] font-mono opacity-50 uppercase text-slate-400">{item.part.sku}</span>
                   </div>
                   <p className="font-bold text-lg uppercase text-white">{item.part.name}</p>
                 </div>
                 <div className="flex items-center gap-4">
                   {status === 'valid' ? <CheckCircle className="animate-bounce"/> : 
                    status === 'invalid' ? <AlertTriangle className="animate-pulse"/> : 
-                   <Barcode className="opacity-50"/>}
+                   <Barcode className="opacity-50 text-white"/>}
                   <input 
                     autoFocus={!status}
                     disabled={status === 'valid'}
@@ -196,13 +201,13 @@ function PickingTerminal({ order, onBack }) {
       </div>
 
       <button 
-        disabled={!allVerified || verifyMutation.isLoading}
-        onClick={() => verifyMutation.mutate(scans)}
+        disabled={!allVerified || verifyMutation.isPending}
+        onClick={() => verifyMutation.mutate()}
         className={`w-full mt-8 py-4 rounded-xl font-black uppercase tracking-widest transition-all ${
           allVerified ? 'bg-brand-accent text-brand-dark hover:brightness-110' : 'bg-white/5 text-slate-700 cursor-not-allowed'
         }`}
       >
-        {verifyMutation.isLoading ? <Loader2 className="animate-spin mx-auto"/> : 'Finalize & Confirm Picking'}
+        {verifyMutation.isPending ? <Loader2 className="animate-spin mx-auto"/> : 'Finalize & Confirm Picking'}
       </button>
     </div>
   );
@@ -233,7 +238,7 @@ function InventoryLookup() {
                 {p.stockQuantity} QTY
               </span>
             </div>
-            <p className="text-[10px] font-mono text-slate-500 mt-1">{p.sku}</p>
+            <p className="text-[10px] font-mono text-slate-500 mt-1 uppercase">{p.sku}</p>
           </div>
         ))}
       </div>
@@ -253,8 +258,8 @@ function StatusBadge({ status }) {
   const styles = {
     PAID: 'text-brand-accent bg-brand-accent/10',
     PENDING: 'text-yellow-500 bg-yellow-500/10',
-    PICKED: 'text-teal-500 bg-teal-500/10',
-    SHIPPED: 'text-blue-500 bg-blue-500/10'
+    PICKED: 'text-blue-500 bg-blue-500/10',
+    SHIPPED: 'text-purple-500 bg-purple-500/10'
   };
   return <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${styles[status] || 'text-slate-500'}`}>{status}</span>;
 }
