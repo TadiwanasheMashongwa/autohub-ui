@@ -14,7 +14,7 @@ export default function ClerkDashboard() {
     <div className="p-8 space-y-8 bg-brand-dark min-h-screen text-white font-sans">
       <div className="flex justify-between items-end border-b border-white/5 pb-6">
         <div>
-          <h1 className="text-3xl font-black uppercase tracking-tighter italic">
+          <h1 className="text-3xl font-black uppercase tracking-tighter italic text-white">
             Warehouse <span className="text-brand-accent">Ops</span>
           </h1>
           <p className="text-[10px] text-slate-500 font-mono mt-1 uppercase tracking-widest">
@@ -45,6 +45,7 @@ function DispatchConsole() {
   const [shippingId, setShippingId] = useState(null);
   const [logistics, setLogistics] = useState({ courier: '', tracking: '' });
 
+  // 🛠️ FIXED: Uses the unified /orders path and correct payload structure
   const updateLogistics = useMutation({
     mutationFn: (id) => adminApi.updateLogistics(id, {
       courier: logistics.courier,
@@ -99,7 +100,7 @@ function DispatchConsole() {
             {orders?.map(o => (
               <tr key={o.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
                 <td className="p-4 font-mono text-brand-accent">#{o.id}</td>
-                <td className="p-4">{o.user?.email}</td>
+                <td className="p-4 text-white">{o.user?.email}</td>
                 <td className="p-4"><StatusBadge status={o.status} /></td>
                 <td className="p-4 text-right">
                   {o.status === 'PAID' ? (
@@ -135,15 +136,16 @@ function PickingTerminal({ order, onBack }) {
   const [scans, setScans] = useState({}); 
   const [feedback, setFeedback] = useState({});
 
+  // 🛠️ FIXED: Uses the updateOrderStatus method to transition to PICKED
   const verifyMutation = useMutation({
-    mutationFn: () => adminApi.verifyPick(order.id),
+    mutationFn: () => adminApi.updateOrderStatus(order.id, 'PICKED'),
     onSuccess: () => {
       queryClient.invalidateQueries(['active-orders']);
       queryClient.invalidateQueries(['orders']); 
       toast.show("Manifest Verified & Locked.", "success");
       onBack();
     },
-    onError: () => toast.show("Barcode Verification Failed", "error")
+    onError: () => toast.show("Status Update Failed", "error")
   });
 
   const handleScan = (itemId, val, correct) => {
@@ -157,12 +159,12 @@ function PickingTerminal({ order, onBack }) {
 
   return (
     <div className="bg-black/20 border border-white/10 rounded-3xl p-8 max-w-3xl mx-auto animate-in zoom-in-95">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-8 text-white">
         <div>
-          <h2 className="text-2xl font-black uppercase tracking-tighter text-white">Picking Manifest <span className="text-brand-accent">#{order.id}</span></h2>
+          <h2 className="text-2xl font-black uppercase tracking-tighter">Picking Manifest <span className="text-brand-accent">#{order.id}</span></h2>
           <p className="text-xs text-slate-500 font-mono mt-1 uppercase">Scan all items to verify physical stock</p>
         </div>
-        <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full text-white"><X/></button>
+        <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full"><X/></button>
       </div>
 
       <div className="space-y-4">
@@ -238,7 +240,7 @@ function InventoryLookup() {
                 {p.stockQuantity} QTY
               </span>
             </div>
-            <p className="text-[10px] font-mono text-slate-500 mt-1 uppercase">{p.sku}</p>
+            <p className="text-[10px] font-mono text-slate-500 mt-1 uppercase tracking-tight">{p.sku}</p>
           </div>
         ))}
       </div>
