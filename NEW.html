@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AutoHub GUI – Customer Interface</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0a0e1a;
+      color: white;
+      height: 100vh;
+      display: flex;
+    }
+
+    /* PRIMARY SIDEBAR */
+    .sidebar {
+      width: 240px;
+      background: #0c1224;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      border-right: 1px solid #1f2a44;
+    }
+
+    .sidebar .box {
+      background: #141b33;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .sidebar .profile {
+      margin-top: auto;
+      background: #141b33;
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+      font-size: 16px;
+    }
+
+    /* REFINE / FILTER PANEL */
+    .refine {
+      width: 280px;
+      background: #0b1122;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      border-right: 1px solid #1f2a44;
+      overflow-y: auto;
+    }
+
+    .refine .filter {
+      background: #141b33;
+      border-radius: 12px;
+      padding: 18px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    /* MAIN CONTENT */
+    .main {
+      flex: 1;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+      overflow-y: auto;
+    }
+
+    /* MAIN CONTENT LABEL (3) */
+    .main-label {
+      background: #141b33;
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+      font-size: 26px;
+      font-weight: bold;
+    }
+
+    .vehicle-panel {
+      background: #141b33;
+      border-radius: 20px;
+      padding: 30px;
+      font-size: 28px;
+      text-align: center;
+    }
+
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .catalog-title {
+      font-size: 32px;
+      font-weight: bold;
+      background: #141b33;
+      padding: 18px;
+      border-radius: 14px;
+      text-align: center;
+      width: 200px;
+    }
+
+    .search-box {
+      width: 320px;
+      background: #141b33;
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .catalog {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 25px;
+    }
+
+    .card {
+      background: #141b33;
+      border-radius: 20px;
+      padding: 60px 20px;
+      text-align: center;
+      font-size: 32px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- (1) PRIMARY SIDEBAR -->
+  <div class="sidebar">
+    <div class="box">1</div>
+    <div class="box">8</div>
+    <div class="profile">9</div>
+  </div>
+
+  <!-- (2) REFINE / FILTER PANEL -->
+  <div class="refine">
+    <div class="filter">2</div>
+    <div class="filter">2</div>
+    <div class="filter">2</div>
+    <div class="filter">2</div>
+    <div class="filter">2</div>
+    <div class="filter">2</div>
+  </div>
+
+  <!-- (3) MAIN CONTENT -->
+  <div class="main">
+
+    <!-- MAIN CONTENT LABEL -->
+    <div class="main-label">3</div>
+
+    <!-- VEHICLE IDENTIFICATION -->
+    <div class="vehicle-panel">
+      4
+    </div>
+
+    <!-- HEADER -->
+    <div class="header-row">
+      <div class="catalog-title">5</div>
+      <div class="search-box">6</div>
+    </div>
+
+    <!-- PRODUCT CARDS -->
+    <div class="catalog">
+      <div class="card">7</div>
+      <div class="card">7</div>
+      <div class="card">7</div>
+    </div>
+
+  </div>
+
+</body>
+</html>
