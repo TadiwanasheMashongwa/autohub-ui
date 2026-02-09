@@ -2,26 +2,25 @@ import apiClient from './apiClient';
 
 export const paymentApi = {
   /**
-   * 1. Request a PaymentIntent from the backend.
-   * Includes an Idempotency-Key to prevent duplicate intents for the same cart.
+   * Phase 6: Payment Initiation
+   * Tells the backend to create a Stripe PaymentIntent for a specific order.
    */
-  createPaymentIntent: async (cartId, idempotencyKey) => {
-    const response = await apiClient.post('/payments/create-intent', 
-      { cartId }, 
-      {
-        headers: {
-          'Idempotency-Key': idempotencyKey
-        }
-      }
-    );
-    return response.data; // { clientSecret: '...' }
+  initiatePayment: async (orderId) => {
+    // Backend: PaymentController.initiatePayment(orderId)
+    const response = await apiClient.post(`/payments/initiate/${orderId}`);
+    return response.data; // Returns { clientSecret: '...' }
   },
 
   /**
-   * 2. Confirm the payment status after Stripe processing.
+   * Phase 6: Payment Confirmation
+   * Notifies our Railway DB that Stripe has successfully charged the user.
    */
-  confirmPaymentStatus: async (paymentIntentId) => {
-    const response = await apiClient.get(`/payments/status/${paymentIntentId}`);
+  confirmPaymentServerSide: async (orderId, paymentIntentId) => {
+    // Backend: PaymentController.confirmPayment(...)
+    const response = await apiClient.post('/payments/confirm', {
+      orderId,
+      paymentIntentId
+    });
     return response.data;
   }
 };

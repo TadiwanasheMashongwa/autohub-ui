@@ -20,24 +20,19 @@ export default function CheckoutForm() {
     if (!stripe || !elements) return;
 
     setIsProcessing(true);
-
-    // 1. Idempotency: Protect against double-clicks
     const idempotencyKey = getIdempotencyKey(`cart_${cart.id}`);
 
     try {
-      // --- STEP 1: CONVERT CART TO ORDER ---
-      // Backend: OrderController.checkout()
+      // 1. Convert Cart to Order
       const order = await orderApi.checkout(idempotencyKey);
-      console.log("Order Created:", order.id);
 
-      // --- STEP 2: INITIATE PAYMENT INTENT ---
-      // Backend: PaymentController.initiate(orderId)
+      // 2. Initiate Stripe Intent
       const paymentResponse = await paymentApi.initiatePayment(order.id);
-      const clientSecret = paymentResponse.clientSecret || paymentResponse.secret; // Handle variable naming
+      const clientSecret = paymentResponse.clientSecret;
 
       if (!clientSecret) throw new Error("Failed to initialize payment gateway");
 
-      // --- STEP 3: CONFIRM WITH STRIPE ---
+      // 3. Confirm with Stripe UI
       const result = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: elements.getElement(CardElement),
@@ -47,24 +42,17 @@ export default function CheckoutForm() {
       if (result.error) {
         toast.show(result.error.message, 'error');
         setIsProcessing(false);
-      } else {
-        if (result.paymentIntent.status === 'succeeded') {
-          
-          // --- STEP 4: CONFIRM ON BACKEND (Mark Order as PAID) ---
-          // Backend: PaymentController.confirm()
+      } else if (result.paymentIntent.status === 'succeeded') {
+          // 4. Confirm Server-Side
           await paymentApi.confirmPaymentServerSide(order.id, result.paymentIntent.id);
           
           toast.show("Transaction Settled Successfully", "success");
-          
-          // Cleanup
           clearIdempotencyKey(`cart_${cart.id}`);
           await refreshCart(); 
           navigate('/dashboard/orders/success');
-        }
       }
     } catch (err) {
-      console.error(err);
-      // Errors are generally caught by the API interceptor, but we disable loading state here
+      console.error("Settlement Error:", err);
       setIsProcessing(false);
     }
   };
@@ -88,7 +76,8 @@ export default function CheckoutForm() {
 
       <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono uppercase">
         <ShieldCheck className="h-4 w-4 text-brand-accent" />
-        Transaction Lock: {cart?.id?.substring(0,6)}
+        {/* SAFE CAST: Convert ID to string before substring */}
+        Transaction Lock: {String(cart?.id || '').substring(0, 6)}
       </div>
 
       <button
@@ -105,3 +94,4 @@ export default function CheckoutForm() {
     </form>
   );
 }
+

@@ -6,23 +6,30 @@ export const cartApi = {
     return response.data;
   },
   
+  // Matches POST /api/v1/cart/add?partId=X&quantity=Y
   addToCart: async (partId, quantity) => {
-    // This triggers the Reservation logic in your backend
-    const response = await apiClient.post('/cart/items', { partId, quantity });
+    const response = await apiClient.post('/cart/add', null, {
+      params: { partId, quantity }
+    });
     return response.data;
   },
   
-  updateQuantity: async (itemId, quantity) => {
-    const response = await apiClient.put(`/cart/items/${itemId}`, { quantity });
+  // Matches PUT /api/v1/cart/update/{cartItemId}?quantity=Y
+  updateQuantity: async (cartItemId, quantity) => {
+    const response = await apiClient.put(`/cart/update/${cartItemId}`, null, {
+      params: { quantity }
+    });
     return response.data;
   },
   
+  // Matches DELETE /api/v1/cart/item/{id}
   removeFromCart: async (itemId) => {
-    const response = await apiClient.delete(`/cart/items/${itemId}`);
+    const response = await apiClient.delete(`/cart/item/${itemId}`);
     return response.data;
   },
   
+  // Matches DELETE /api/v1/cart/clear
   clearCart: async () => {
-    await apiClient.delete('/cart');
+    await apiClient.delete('/cart/clear');
   }
 };

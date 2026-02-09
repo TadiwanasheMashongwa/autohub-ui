@@ -1,37 +1,43 @@
 import apiClient from './apiClient';
 
-/**
- * Silicon Valley Grade: Inventory Service Layer
- * pluralized to match filename and terminal logic.
- */
 export const partsApi = {
-  // Consumes PartController @GetMapping (Public)
-  getParts: async (page = 0, size = 12) => {
-    const response = await apiClient.get(`/parts?page=${page}&size=${size}`);
+  getParts: async (page = 0, filters = {}) => {
+    // Silicon Valley Grade: Clean params to avoid sending 'undefined' strings
+    const params = { page, size: 12 };
+    if (filters.brand) params.brand = filters.brand;
+    if (filters.condition) params.condition = filters.condition;
+
+    const response = await apiClient.get('/parts', { params });
     return response.data;
   },
 
-  // Matches @Query in PartRepository for name, brand, sku, oemNumber
-  searchParts: async (query, page = 0, size = 12) => {
-    const response = await apiClient.get(`/parts/search?query=${query}&page=${page}&size=${size}`);
+  searchParts: async (query, page = 0, filters = {}) => {
+    const params = { query, page, size: 12 };
+    if (filters.brand) params.brand = filters.brand;
+    if (filters.condition) params.condition = filters.condition;
+
+    const response = await apiClient.get('/parts/search', { params });
     return response.data;
   },
 
-  // Consumes findByCategoryId
-  getPartsByCategory: async (categoryId, page = 0, size = 12) => {
-    const response = await apiClient.get(`/parts/category/${categoryId}?page=${page}&size=${size}`);
+  getPartsByCategory: async (categoryId, page = 0, filters = {}) => {
+    const params = { page, size: 12 };
+    if (filters.brand) params.brand = filters.brand;
+    if (filters.condition) params.condition = filters.condition;
+
+    const response = await apiClient.get(`/parts/category/${categoryId}`, { params });
     return response.data;
   },
 
-  // Consumes findByCompatibleVehiclesId
-  getPartsByVehicle: async (vehicleId, page = 0, size = 12) => {
-    const response = await apiClient.get(`/parts/vehicle/${vehicleId}?page=${page}&size=${size}`);
-    return response.data;
-  },
-
-  // Fetches full technical specs and reviews
   getPartDetails: async (id) => {
     const response = await apiClient.get(`/parts/${id}`);
+    return response.data;
+  },
+
+  getPartsByVehicle: async (vehicleId, page = 0) => {
+    const response = await apiClient.get(`/parts/vehicle/${vehicleId}`, { 
+      params: { page, size: 12 } 
+    });
     return response.data;
   }
 };
