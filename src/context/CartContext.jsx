@@ -13,7 +13,9 @@ export const CartProvider = ({ children }) => {
 
   // Load cart when user logs in
   useEffect(() => {
-    if (user) {
+    // 🛠️ ROLE-BASED GUARD: Only attempt to fetch if the user is a CUSTOMER
+    // This prevents 403 Forbidden errors for Clerks and Admins
+    if (user && user.role === 'CUSTOMER') {
       refreshCart();
     } else {
       setCart(null);
@@ -25,11 +27,19 @@ export const CartProvider = ({ children }) => {
       const data = await cartApi.getCart();
       setCart(data);
     } catch (err) {
-      console.error("Failed to load cart from Railway");
+      // Supressing error log for non-customer roles as it is expected behavior
+      if (user?.role === 'CUSTOMER') {
+        console.error("Failed to load cart from Railway");
+      }
     }
   };
 
   const addItem = async (partId, quantity = 1) => {
+    // Prevent non-customers from performing cart actions
+    if (user?.role !== 'CUSTOMER') {
+      return;
+    }
+
     setLoading(true);
     try {
       const updatedCart = await cartApi.addToCart(partId, quantity);
@@ -83,17 +93,19 @@ export const CartProvider = ({ children }) => {
   };
 
   return (
-    <CartContext.Provider value={{ 
-      cart, 
-      addItem, 
-      removeItem, 
-      updateQuantity, // Added for Step 3 UI
-      clearCart,
-      refreshCart, 
-      isDrawerOpen, 
-      setIsDrawerOpen,
-      loading
-    }}>
+    <CartContext.Provider 
+      value={{ 
+        cart, 
+        addItem, 
+        removeItem, 
+        updateQuantity, // Added for Step 3 UI
+        clearCart,
+        refreshCart, 
+        isDrawerOpen, 
+        setIsDrawerOpen,
+        loading
+      }}
+    >
       {children}
     </CartContext.Provider>
   );

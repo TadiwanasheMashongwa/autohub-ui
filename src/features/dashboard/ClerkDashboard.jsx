@@ -3,8 +3,16 @@ import { adminApi } from '../../api/adminApi';
 import { useState } from 'react';
 import { toast } from '../../context/NotificationContext';
 import { 
-  Package, Truck, ScanLine, Barcode, CheckCircle, X, Loader2, AlertTriangle, 
-  ClipboardCheck, Search
+  Package, 
+  Truck, 
+  ScanLine, 
+  Barcode, 
+  CheckCircle, 
+  X, 
+  Loader2, 
+  AlertTriangle, 
+  ClipboardCheck, 
+  Search 
 } from 'lucide-react';
 
 export default function ClerkDashboard() {
@@ -14,7 +22,7 @@ export default function ClerkDashboard() {
     <div className="p-8 space-y-8 bg-brand-dark min-h-screen text-white font-sans">
       <div className="flex justify-between items-end border-b border-white/5 pb-6">
         <div>
-          <h1 className="text-3xl font-black uppercase tracking-tighter italic text-white">
+          <h1 className="text-3xl font-black uppercase tracking-tighter italic">
             Warehouse <span className="text-brand-accent">Ops</span>
           </h1>
           <p className="text-[10px] text-slate-500 font-mono mt-1 uppercase tracking-widest">
@@ -22,8 +30,18 @@ export default function ClerkDashboard() {
           </p>
         </div>
         <div className="flex gap-2">
-          <NavBtn label="Dispatch Console" active={activeTab === 'dispatch'} onClick={() => setActiveTab('dispatch')} icon={<Truck size={14}/>} />
-          <NavBtn label="Inventory Search" active={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} icon={<Package size={14}/>} />
+          <NavBtn 
+            label="Dispatch Console" 
+            active={activeTab === 'dispatch'} 
+            onClick={() => setActiveTab('dispatch')} 
+            icon={<Truck size={14}/>} 
+          />
+          <NavBtn 
+            label="Inventory Search" 
+            active={activeTab === 'inventory'} 
+            onClick={() => setActiveTab('inventory')} 
+            icon={<Package size={14}/>} 
+          />
         </div>
       </div>
 
@@ -45,7 +63,6 @@ function DispatchConsole() {
   const [shippingId, setShippingId] = useState(null);
   const [logistics, setLogistics] = useState({ courier: '', tracking: '' });
 
-  // 🛠️ FIXED: Uses the unified /orders path and correct payload structure
   const updateLogistics = useMutation({
     mutationFn: (id) => adminApi.updateLogistics(id, {
       courier: logistics.courier,
@@ -58,7 +75,10 @@ function DispatchConsole() {
       setLogistics({ courier: '', tracking: '' });
       toast.show("Shipping Confirmed. Customer Notified.", "success");
     },
-    onError: () => toast.show("Terminal Restricted: Access Denied", "error")
+    onError: (err) => {
+      const msg = err.response?.status === 403 ? "Terminal Restricted: Access Denied" : "Dispatch Failed";
+      toast.show(msg, "error");
+    }
   });
 
   if (isLoading) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-brand-accent h-8 w-8"/></div>;
@@ -100,23 +120,47 @@ function DispatchConsole() {
             {orders?.map(o => (
               <tr key={o.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
                 <td className="p-4 font-mono text-brand-accent">#{o.id}</td>
-                <td className="p-4 text-white">{o.user?.email}</td>
+                <td className="p-4">{o.user?.email}</td>
                 <td className="p-4"><StatusBadge status={o.status} /></td>
                 <td className="p-4 text-right">
                   {o.status === 'PAID' ? (
-                    <button onClick={() => setActiveManifest(o)} className="bg-brand-accent text-brand-dark px-4 py-2 rounded-lg font-black uppercase text-[10px] flex items-center gap-2 ml-auto hover:scale-105 transition-all">
+                    <button 
+                      onClick={() => setActiveManifest(o)} 
+                      className="bg-brand-accent text-brand-dark px-4 py-2 rounded-lg font-black uppercase text-[10px] flex items-center gap-2 ml-auto hover:scale-105 transition-all"
+                    >
                       <ScanLine size={14}/> Initialize Pick
                     </button>
                   ) : o.status === 'PICKED' ? (
                     shippingId === o.id ? (
                         <div className="flex gap-2 justify-end animate-in slide-in-from-right">
-                          <input placeholder="Courier" className="bg-black/40 border border-white/10 p-2 rounded text-[10px] w-24 outline-none focus:border-brand-accent text-white" value={logistics.courier} onChange={e => setLogistics({...logistics, courier: e.target.value})} />
-                          <input placeholder="Tracking #" className="bg-black/40 border border-white/10 p-2 rounded text-[10px] w-32 outline-none focus:border-brand-accent text-white" value={logistics.tracking} onChange={e => setLogistics({...logistics, tracking: e.target.value})} />
-                          <button onClick={() => updateLogistics.mutate(o.id)} disabled={!logistics.courier || !logistics.tracking} className="bg-teal-500 text-black px-3 rounded font-bold hover:bg-teal-400 disabled:opacity-50 text-[10px] uppercase">Save</button>
-                          <button onClick={() => setShippingId(null)} className="p-2 text-slate-500 hover:text-white"><X size={14}/></button>
+                          <input 
+                            placeholder="Courier" 
+                            className="bg-black/40 border border-white/10 p-2 rounded text-[10px] w-24 outline-none focus:border-brand-accent text-white" 
+                            value={logistics.courier} 
+                            onChange={e => setLogistics({...logistics, courier: e.target.value})} 
+                          />
+                          <input 
+                            placeholder="Tracking #" 
+                            className="bg-black/40 border border-white/10 p-2 rounded text-[10px] w-32 outline-none focus:border-brand-accent text-white" 
+                            value={logistics.tracking} 
+                            onChange={e => setLogistics({...logistics, tracking: e.target.value})} 
+                          />
+                          <button 
+                            onClick={() => updateLogistics.mutate(o.id)} 
+                            disabled={!logistics.courier || !logistics.tracking || updateLogistics.isPending} 
+                            className="bg-teal-500 text-black px-3 rounded font-bold hover:bg-teal-400 disabled:opacity-50 text-[10px] uppercase"
+                          >
+                            {updateLogistics.isPending ? '...' : 'Save'}
+                          </button>
+                          <button onClick={() => setShippingId(null)} className="p-2 text-slate-500 hover:text-white">
+                            <X size={14}/>
+                          </button>
                         </div>
                       ) : (
-                        <button onClick={() => setShippingId(o.id)} className="bg-white/10 px-4 py-2 rounded-lg font-bold uppercase text-[10px] ml-auto hover:bg-white/20 transition-all text-white">
+                        <button 
+                          onClick={() => setShippingId(o.id)} 
+                          className="bg-white/10 px-4 py-2 rounded-lg font-bold uppercase text-[10px] ml-auto hover:bg-white/20 transition-all text-white"
+                        >
                           Dispatch
                         </button>
                       )
@@ -136,7 +180,6 @@ function PickingTerminal({ order, onBack }) {
   const [scans, setScans] = useState({}); 
   const [feedback, setFeedback] = useState({});
 
-  // 🛠️ FIXED: Uses the updateOrderStatus method to transition to PICKED
   const verifyMutation = useMutation({
     mutationFn: () => adminApi.updateOrderStatus(order.id, 'PICKED'),
     onSuccess: () => {
@@ -144,8 +187,7 @@ function PickingTerminal({ order, onBack }) {
       queryClient.invalidateQueries(['orders']); 
       toast.show("Manifest Verified & Locked.", "success");
       onBack();
-    },
-    onError: () => toast.show("Status Update Failed", "error")
+    }
   });
 
   const handleScan = (itemId, val, correct) => {
@@ -159,12 +201,14 @@ function PickingTerminal({ order, onBack }) {
 
   return (
     <div className="bg-black/20 border border-white/10 rounded-3xl p-8 max-w-3xl mx-auto animate-in zoom-in-95">
-      <div className="flex justify-between items-center mb-8 text-white">
+      <div className="flex justify-between items-center mb-8">
         <div>
-          <h2 className="text-2xl font-black uppercase tracking-tighter">Picking Manifest <span className="text-brand-accent">#{order.id}</span></h2>
+          <h2 className="text-2xl font-black uppercase tracking-tighter text-white">
+            Picking Manifest <span className="text-brand-accent">#{order.id}</span>
+          </h2>
           <p className="text-xs text-slate-500 font-mono mt-1 uppercase">Scan all items to verify physical stock</p>
         </div>
-        <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full"><X/></button>
+        <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full text-white"><X/></button>
       </div>
 
       <div className="space-y-4">
@@ -179,8 +223,12 @@ function PickingTerminal({ order, onBack }) {
               <div className="flex justify-between items-center">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-black bg-white/10 px-2 py-0.5 rounded text-white uppercase">Bin: {item.part.binLocation || 'A-00'}</span>
-                    <span className="text-[10px] font-mono opacity-50 uppercase text-slate-400">{item.part.sku}</span>
+                    <span className="text-[10px] font-black bg-white/10 px-2 py-0.5 rounded text-white uppercase">
+                      Bin: {item.part.binLocation || 'A-00'}
+                    </span>
+                    <span className="text-[10px] font-mono opacity-50 uppercase text-slate-400">
+                      {item.part.sku}
+                    </span>
                   </div>
                   <p className="font-bold text-lg uppercase text-white">{item.part.name}</p>
                 </div>
@@ -217,7 +265,10 @@ function PickingTerminal({ order, onBack }) {
 
 function InventoryLookup() {
   const [q, setQ] = useState('');
-  const { data: parts } = useQuery({ queryKey: ['parts', q], queryFn: () => adminApi.getParts(q) });
+  const { data: parts } = useQuery({ 
+    queryKey: ['parts', q], 
+    queryFn: () => adminApi.getParts(q) 
+  });
 
   return (
     <div className="space-y-4">
@@ -240,7 +291,7 @@ function InventoryLookup() {
                 {p.stockQuantity} QTY
               </span>
             </div>
-            <p className="text-[10px] font-mono text-slate-500 mt-1 uppercase tracking-tight">{p.sku}</p>
+            <p className="text-[10px] font-mono text-slate-500 mt-1 uppercase">{p.sku}</p>
           </div>
         ))}
       </div>
@@ -250,7 +301,12 @@ function InventoryLookup() {
 
 function NavBtn({ label, active, onClick, icon }) {
   return (
-    <button onClick={onClick} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${active ? 'bg-brand-accent text-brand-dark' : 'text-slate-400 hover:bg-white/5'}`}>
+    <button 
+      onClick={onClick} 
+      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${
+        active ? 'bg-brand-accent text-brand-dark' : 'text-slate-400 hover:bg-white/5'
+      }`}
+    >
       {icon} {label}
     </button>
   );
@@ -263,5 +319,9 @@ function StatusBadge({ status }) {
     PICKED: 'text-blue-500 bg-blue-500/10',
     SHIPPED: 'text-purple-500 bg-purple-500/10'
   };
-  return <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${styles[status] || 'text-slate-500'}`}>{status}</span>;
+  return (
+    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${styles[status] || 'text-slate-500'}`}>
+      {status}
+    </span>
+  );
 }
